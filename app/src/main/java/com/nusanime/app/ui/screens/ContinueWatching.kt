@@ -52,7 +52,7 @@ fun ContinueWatchingRow(onOpen: (String) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(items, key = { it.episodeId }) { h ->
-                Column(Modifier.width(120.dp).clickable { onOpen(h.episodeId) }) {
+                Column(Modifier.width(150.dp).clickable { onOpen(h.episodeId) }) {
                     Box {
                         AsyncImage(
                             model = h.poster,

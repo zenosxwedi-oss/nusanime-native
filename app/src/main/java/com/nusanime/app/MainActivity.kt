@@ -200,6 +200,7 @@ fun App(openEpisode: String? = null) {
                     animeId = animeId,
                     onBack = { nav.popBackStack() },
                     onOpenEpisode = { nav.navigate(Routes.player(it)) },
+                    onOpenDetail = { id -> nav.navigate(Routes.detail(id)) },
                 )
             }
             composable(Routes.PLAYER) { entry ->

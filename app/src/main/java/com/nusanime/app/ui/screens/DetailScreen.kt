@@ -136,7 +136,7 @@ class DetailViewModel(private val animeId: String) : ViewModel() {
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) -> Unit) {
+fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) -> Unit, onOpenDetail: (String) -> Unit) {
     val vm: DetailViewModel = viewModel(
         key = "detail_$animeId",
         factory = viewModelFactory { initializer { DetailViewModel(animeId) } },
@@ -146,6 +146,11 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
     vm.error?.let { ErrorScreen(it) { vm.load() }; return }
 
     val d = vm.detail ?: return
+    androidx.compose.runtime.LaunchedEffect(d) {
+        d.episodeList.orEmpty().forEach { ep ->
+            ep.episodeId?.let { eid -> com.nusanime.app.data.PosterCache.put(eid, com.nusanime.app.data.PosterCache.Info(d.poster, animeId, d.title)) }
+        }
+    }
     LazyColumn(Modifier.fillMaxSize()) {
         item {
             Box(Modifier.fillMaxWidth().height(240.dp)) {
@@ -241,7 +246,46 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                 Text("Belum ada episode.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        item { Spacer(Modifier.height(24.dp)) }
+        item {
+            Spacer(Modifier.height(16.dp))
+            Text("Rekomendasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+        }
+        item {
+            val recs = remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
+            androidx.compose.runtime.LaunchedEffect(d.animeId) {
+                try {
+                    val env = com.nusanime.app.data.api.AxSource.home()
+                    val h = env.data
+                    recs.value = (h?.top10?.animeList.orEmpty() + h?.recent?.animeList.orEmpty())
+                        .distinctBy { it.animeId }
+                        .filter { it.animeId != null && it.animeId != animeId }
+                        .take(12)
+                } catch (_: Exception) {}
+            }
+            if (recs.value.isEmpty()) {
+                Text("Memuat rekomendasi...", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            } else {
+                androidx.compose.foundation.lazy.LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(recs.value, key = { it.animeId ?: it.title }) { r ->
+                        Column(Modifier.width(110.dp).clickable { r.animeId?.let { id -> onOpenDetail(id) } }) {
+                            AsyncImage(
+                                model = r.poster,
+                                contentDescription = r.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxWidth().height(155.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(r.title ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
     }
 }
 

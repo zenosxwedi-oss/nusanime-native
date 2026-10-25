@@ -53,9 +53,9 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
             db.historyDao().upsert(
                 com.nusanime.app.data.db.WatchHistory(
                     episodeId = episodeId,
-                    animeId = d.animeId ?: "",
-                    animeTitle = d.title ?: "",
-                    poster = d.poster,
+                    animeId = d.animeId ?: com.nusanime.app.data.PosterCache.get(episodeId)?.animeId ?: "",
+                    animeTitle = d.title ?: com.nusanime.app.data.PosterCache.get(episodeId)?.animeTitle ?: "",
+                    poster = d.poster ?: com.nusanime.app.data.PosterCache.get(episodeId)?.poster,
                     episodeTitle = episodeId.substringAfterLast('-'),
                     positionMs = positionMs,
                     durationMs = durationMs,
@@ -169,58 +169,6 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
                     Text(d.title ?: "-", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     d.releasedOn?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     Spacer(Modifier.height(16.dp))
-
-                    val serverList = d.server?.qualities.orEmpty()
-                        .flatMap { q -> q.serverList.orEmpty().map { it to q.title.orEmpty() } }
-                        .filter { (s, _) -> s.serverId != null }
-                        .filter { (s, _) -> !(s.title ?: "").contains("VIP", true) }
-                    if (serverList.isNotEmpty()) {
-                        Text("Server Streaming", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            serverList.forEachIndexed { i, (s, quality) ->
-                                val label = buildString {
-                                    append("Server ${i + 1}")
-                                    if (quality.isNotBlank() && quality != "unknown") append(" • $quality")
-                                }
-                                OutlinedButton(onClick = { s.serverId?.let(vm::playServer) }) { Text(label) }
-                            }
-                        }
-                        Spacer(Modifier.height(16.dp))
-                    }
-
-                    // Download options (direct links only)
-                    val dlCtx = androidx.compose.ui.platform.LocalContext.current
-                    val dlLinks = serverList.filter { (_, quality) -> quality.isNotBlank() }
-                        .distinctBy { (s, _) -> s.serverId }
-                        .take(6)
-                    if (dlLinks.isNotEmpty()) {
-                        Text("Unduh Episode", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            dlLinks.forEach { (s, quality) ->
-                                OutlinedButton(onClick = {
-                                    if (s.serverId.isNullOrBlank()) return@OutlinedButton
-                                    com.nusanime.app.download.DownloadManager.enqueue(
-                                        context = dlCtx,
-                                        episodeId = episodeId + "_" + (s.title ?: quality),
-                                        animeId = d.animeId ?: episodeId.substringBeforeLast("-episode"),
-                                        animeTitle = d.title ?: "Anime",
-                                        episodeLabel = d.title ?: "Episode",
-                                        poster = d.poster,
-                                        url = s.serverId ?: "",
-                                        quality = quality.ifBlank { null },
-                                    )
-                                    android.widget.Toast.makeText(dlCtx, "Unduhan dimulai", android.widget.Toast.LENGTH_SHORT).show()
-                                }) {
-                                    Icon(Icons.Default.Download, null, Modifier.size(16.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Unduh${if (quality.isNotBlank()) " $quality" else ""}")
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(16.dp))
-                    }
 
                     Row(
                         Modifier.padding(top = 16.dp).fillMaxWidth(),
@@ -345,6 +293,29 @@ private fun PlayerArea(vm: PlayerViewModel) {
 
     val playerModifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
     Box(playerModifier.background(androidx.compose.ui.graphics.Color.Black)) {
+        // Quality/server switcher inside the video
+        val serversAll = vm.data?.server?.qualities.orEmpty()
+        if (serversAll.isNotEmpty()) {
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+            ) {
+                for (q in serversAll) {
+                    for (sv in q.serverList.orEmpty()) {
+                        item {
+                            androidx.compose.material3.FilledTonalButton(
+                                onClick = { vm.playServer(sv.serverId) },
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.55f),
+                                    contentColor = androidx.compose.ui.graphics.Color.White,
+                                ),
+                            ) { Text(q.label ?: sv.label ?: "OK", style = MaterialTheme.typography.labelSmall) }
+                        }
+                    }
+                }
+            }
+        }
         val url = vm.playingUrl
         if (url != null && player != null) {
             AndroidView(

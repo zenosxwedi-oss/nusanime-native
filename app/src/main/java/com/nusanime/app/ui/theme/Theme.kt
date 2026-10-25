@@ -8,53 +8,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 
-// Palette matches AnimeX-App (HatsuneMikuUwU) — soft blue scheme
-val PrimaryLight = Color(0xFF415F91)
-val PrimaryDark = Color(0xFFAAC7FF)
-val BackgroundLight = Color(0xFFF9F9FF)
-val BackgroundDark = Color(0xFF111318)
-val SurfaceContainerLight = Color(0xFFEDEDF4)
-val SurfaceContainerDark = Color(0xFF1D2024)
-
-private val LightColors = lightColorScheme(
-    primary = PrimaryLight,
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFD6E3FF),
-    onPrimaryContainer = Color(0xFF001B3F),
-    secondary = Color(0xFF565F71),
-    secondaryContainer = Color(0xFFDAE2F9),
-    tertiary = Color(0xFF705575),
-    background = BackgroundLight,
-    onBackground = Color(0xFF191C20),
-    surface = BackgroundLight,
-    onSurface = Color(0xFF191C20),
-    surfaceVariant = Color(0xFFE0E2EC),
-    onSurfaceVariant = Color(0xFF44474E),
-    surfaceContainer = SurfaceContainerLight,
-    surfaceContainerLow = Color(0xFFF3F3FA),
-    surfaceContainerHigh = Color(0xFFE7E8EE),
-    outline = Color(0xFF74777F),
-)
-
-private val DarkColors = darkColorScheme(
-    primary = PrimaryDark,
-    onPrimary = Color(0xFF0A305F),
-    primaryContainer = Color(0xFF284777),
-    onPrimaryContainer = Color(0xFFD6E3FF),
-    secondary = Color(0xFFBEC6DC),
-    secondaryContainer = Color(0xFF3E4759),
-    tertiary = Color(0xFFDDBCE0),
-    background = BackgroundDark,
-    onBackground = Color(0xFFE2E2E9),
-    surface = BackgroundDark,
-    onSurface = Color(0xFFE2E2E9),
-    surfaceVariant = Color(0xFF44474E),
-    onSurfaceVariant = Color(0xFFC4C6D0),
-    surfaceContainer = SurfaceContainerDark,
-    surfaceContainerLow = Color(0xFF191C20),
-    surfaceContainerHigh = Color(0xFF282A2F),
-    outline = Color(0xFF8E9099),
-)
+// Theme inspired by dark anime apps (Trakteer-style):
+// deep navy background, vivid red accent
+val AccentRed = Color(0xFFFF4757)
+val BgDark = Color(0xFF0F1420)
+val BgDarker = Color(0xFF0A0E17)
+val CardDark = Color(0xFF1A2130)
+val BgLight = Color(0xFFF6F7FB)
+val CardLight = Color(0xFFFFFFFF)
 
 // Theme mode persisted: 0 = system, 1 = light, 2 = dark
 object ThemePrefs {
@@ -66,6 +27,40 @@ object ThemePrefs {
         context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putInt(KEY, value).apply()
     }
 }
+
+private val DarkColors = darkColorScheme(
+    primary = AccentRed,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFF3D1A20),
+    onPrimaryContainer = Color(0xFFFFD9DC),
+    secondary = Color(0xFF8A94A8),
+    secondaryContainer = CardDark,
+    background = BgDark,
+    onBackground = Color(0xFFE9ECF3),
+    surface = BgDark,
+    onSurface = Color(0xFFE9ECF3),
+    surfaceVariant = CardDark,
+    onSurfaceVariant = Color(0xFF9AA3B5),
+    surfaceContainer = CardDark,
+    surfaceContainerLow = BgDarker,
+    surfaceContainerHigh = Color(0xFF232B3D),
+    outline = Color(0xFF3A4358),
+)
+
+private val LightColors = lightColorScheme(
+    primary = Color(0xFFD32F2F),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFFFDAD6),
+    onPrimaryContainer = Color(0xFF410002),
+    secondary = Color(0xFF565F71),
+    background = BgLight,
+    onBackground = Color(0xFF191C20),
+    surface = BgLight,
+    onSurface = Color(0xFF191C20),
+    surfaceVariant = Color(0xFFE0E2EC),
+    onSurfaceVariant = Color(0xFF44474E),
+    surfaceContainer = CardLight,
+)
 
 @Composable
 fun NusanimeTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
