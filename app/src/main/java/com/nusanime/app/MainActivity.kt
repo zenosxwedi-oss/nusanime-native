@@ -37,6 +37,11 @@ import androidx.navigation.compose.rememberNavController
 import com.nusanime.app.ui.player.PlayerScreen
 import com.nusanime.app.ui.screens.*
 import com.nusanime.app.ui.theme.NusanimeTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 
 object Routes {
     const val HOME = "home"
@@ -138,27 +143,44 @@ fun App(openEpisode: String? = null) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
-        topBar = {
+        bottomBar = {
             if (showBars) {
-                Surface(tonalElevation = 3.dp) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        tabs.forEach { tab ->
-                            val selected = currentRoute == tab.route
-                            FilterChip(
-                                selected = selected,
-                                onClick = {
-                                    nav.navigate(tab.route) {
-                                        popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
+                NavigationBar(
+                    containerColor = Color(0xFF161D2C),
+                    tonalElevation = 8.dp,
+                ) {
+                    val bottomTabs = listOf(
+                        BottomItem(Routes.HOME, "HOME", Icons.Default.Home),
+                        BottomItem(Routes.SCHEDULE, "JADWAL", Icons.Default.CalendarMonth),
+                        BottomItem(Routes.SEARCH, "CARI", Icons.Default.Search),
+                        BottomItem(Routes.BOOKMARKS, "SIMPAN", Icons.Default.Bookmarks),
+                        BottomItem(Routes.SETTINGS, "PROFILE", Icons.Default.Settings),
+                    )
+                    bottomTabs.forEach { tab ->
+                        val selected = currentRoute == tab.route
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                nav.navigate(tab.route) {
+                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = { Icon(tab.icon, tab.label) },
+                            label = { Text(tab.label, style = MaterialTheme.typography.labelSmall, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color(0xFFFF4757),
+                                selectedTextColor = Color(0xFFFF4757),
+                                unselectedIconColor = Color(0xFF8A94A8),
+                                unselectedTextColor = Color(0xFF8A94A8),
+                                indicatorColor = Color(0xFF2A1B20),
+                            ),
+                        )
+                    }
+                }
+            }
+        },
                                 label = { Text(tab.label) },
                                 leadingIcon = { Icon(tab.icon, tab.label, Modifier.height(18.dp)) },
                                 colors = FilterChipDefaults.filterChipColors(

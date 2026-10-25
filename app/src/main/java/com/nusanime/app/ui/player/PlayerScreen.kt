@@ -146,9 +146,19 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
     )
 
     if (vm.fullscreen) {
-        // True fullscreen: only the video, edge to edge
+        // True fullscreen: only the video, edge to edge, with a back button
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black)) {
             PlayerArea(vm)
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Kembali",
+                    tint = androidx.compose.ui.graphics.Color.White,
+                )
+            }
         }
         return
     }
