@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +31,7 @@ fun BookmarksScreen(onOpenDetail: (String) -> Unit) {
     val ctx = LocalContext.current
     val db = remember { AppDatabase.get(ctx) }
     val items by db.bookmarkDao().all().collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
 
     if (items.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -58,7 +61,7 @@ fun BookmarksScreen(onOpenDetail: (String) -> Unit) {
                             .clickable { onOpenDetail(bm.animeId) },
                     )
                     IconButton(
-                        onClick = { db.bookmarkDao().let { dao -> kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { dao.delete(bm.animeId) } } },
+                        onClick = { scope.launch(kotlinx.coroutines.Dispatchers.IO) { db.bookmarkDao().delete(bm.animeId) } },
                         modifier = Modifier.align(Alignment.TopEnd),
                     ) {
                         Icon(Icons.Default.Delete, "Hapus", tint = androidx.compose.ui.graphics.Color.White)
@@ -74,6 +77,3 @@ fun BookmarksScreen(onOpenDetail: (String) -> Unit) {
         }
     }
 }
-
-private fun kotlinx.coroutines.CoroutineScope.launch(block: suspend () -> Unit) =
-    kotlinx.coroutines.launch { block() }

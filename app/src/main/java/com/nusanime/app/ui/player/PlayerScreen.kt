@@ -182,6 +182,7 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
                     }
 
                     // Download options (direct links only)
+                    val dlCtx = androidx.compose.ui.platform.LocalContext.current
                     val dlLinks = serverList.filter { (_, quality) -> quality.isNotBlank() }
                         .distinctBy { (s, _) -> s.serverId }
                         .take(6)
@@ -191,18 +192,17 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             dlLinks.forEach { (s, quality) ->
                                 OutlinedButton(onClick = {
-                                    val ctx = androidx.compose.ui.platform.LocalContext.current
                                     com.nusanime.app.download.DownloadManager.enqueue(
-                                        context = ctx,
+                                        context = dlCtx,
                                         episodeId = episodeId + "_" + (s.title ?: quality),
                                         animeId = d.animeId ?: episodeId.substringBeforeLast("-episode"),
                                         animeTitle = d.title ?: "Anime",
                                         episodeLabel = d.title ?: "Episode",
                                         poster = d.poster,
-                                        url = s.serverId ?: return@OutlinedButton,
+                                        url = s.serverId ?: return@forEach,
                                         quality = quality.ifBlank { null },
                                     )
-                                    android.widget.Toast.makeText(ctx, "Unduhan dimulai", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(dlCtx, "Unduhan dimulai", android.widget.Toast.LENGTH_SHORT).show()
                                 }) {
                                     Icon(Icons.Default.Download, null, Modifier.size(16.dp))
                                     Spacer(Modifier.width(4.dp))
