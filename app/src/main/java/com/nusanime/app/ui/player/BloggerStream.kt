@@ -12,6 +12,7 @@ import java.net.URL
  * resolved on a server.
  */
 object BloggerStream {
+    private const val BS = "\"
 
     fun isBlogger(url: String): Boolean =
         url.contains("blogger.com/video.g") || url.contains("googleusercontent.com/videoplayback")
@@ -22,11 +23,12 @@ object BloggerStream {
             val html = httpGet(pageUrl)
             // unescape = & &quot;
             val h = html
-                .replace("\\u003d", "=")
-                .replace("\\u0026", "&")
+                .replace(BS + "u003d", "=")
+                .replace(BS + "u0026", "&")
                 .replace("&quot;", "\"")
-            val re = Regex("https://[a-z0-9.-]*googlevideo[.]com/videoplayback\\?.*?(?=\\\\,|\\"|<)")
-            val urls = re.findAll(h).map { it.value.trimEnd('\\') }.distinct().toList()
+                .replace(BS + ",", ",")
+            val urls = Regex("https://[a-z0-9.-]*googlevideo[.]com/videoplayback[?][A-Za-z0-9=_.,%:&/-]+")
+                .findAll(h).map { it.value }.distinct().toList()
             // prefer highest itag present (18 = 360p progressive; blogger usually exposes one per token)
             urls.maxByOrNull { it.length } ?: urls.firstOrNull()
         } catch (_: Exception) {
