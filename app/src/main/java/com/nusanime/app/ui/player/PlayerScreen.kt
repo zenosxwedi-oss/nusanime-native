@@ -1,5 +1,6 @@
 package com.nusanime.app.ui.player
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -91,6 +92,7 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) -> Unit) {
     val vm: PlayerViewModel = viewModel(
@@ -200,7 +202,7 @@ private fun flattenDownloads(d: DownloadData?): List<Pair<String, String>> {
         f.qualities?.forEach { q ->
             q.urls?.forEach { u ->
                 val url = u.url ?: return@forEach
-                out.add("${f.title.orEmpty()} • ${q.title.orEmpty()} • ${u.title.orEmpty()}", url)
+                out.add(Pair("${f.title.orEmpty()} • ${q.title.orEmpty()} • ${u.title.orEmpty()}", url))
             }
         }
     }

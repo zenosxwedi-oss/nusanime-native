@@ -46,7 +46,6 @@ class ScheduleViewModel : ViewModel() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleScreen(onOpenDetail: (String) -> Unit) {
     val vm: ScheduleViewModel = viewModel(factory = viewModelFactory { initializer { ScheduleViewModel() } })
@@ -57,7 +56,7 @@ fun ScheduleScreen(onOpenDetail: (String) -> Unit) {
         return
     }
 
-    PullToRefreshBox(isRefreshing = vm.refreshing, onRefresh = { vm.refreshing = true; vm.load() }) {
+    Column {
         LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             val dayList = vm.days?.days.orEmpty()
             items(dayList) { day ->

@@ -24,8 +24,10 @@ class ListViewModel(private val source: Source) : ViewModel() {
     var refreshing by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
     private var page = 1
-    private var loadingMore = false
-    private var endReached = false
+    var loadingMore = false
+        private set
+    var endReached = false
+        private set
 
     init { load(initial = true) }
 

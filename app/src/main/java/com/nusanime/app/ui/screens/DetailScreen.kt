@@ -53,6 +53,7 @@ class DetailViewModel(private val animeId: String) : ViewModel() {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) -> Unit) {
     val vm: DetailViewModel = viewModel(
