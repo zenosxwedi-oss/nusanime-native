@@ -6,7 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Subscriptions
@@ -30,6 +33,9 @@ object Routes {
     const val COMPLETED = "completed"
     const val SCHEDULE = "schedule"
     const val SEARCH = "search"
+    const val BOOKMARKS = "bookmarks"
+    const val HISTORY = "history"
+    const val DOWNLOADS = "downloads"
     const val DETAIL = "detail/{animeId}"
     const val PLAYER = "player/{episodeId}"
     fun detail(animeId: String) = "detail/$animeId"
@@ -81,6 +87,9 @@ fun App(openEpisode: String? = null) {
         BottomItem(Routes.COMPLETED, "Tamatan", Icons.Default.TaskAlt),
         BottomItem(Routes.SCHEDULE, "Jadwal", Icons.Default.CalendarMonth),
         BottomItem(Routes.SEARCH, "Cari", Icons.Default.Search),
+        BottomItem(Routes.BOOKMARKS, "Simpan", Icons.Default.Bookmarks),
+        BottomItem(Routes.HISTORY, "Riwayat", Icons.Default.History),
+        BottomItem(Routes.DOWNLOADS, "Unduhan", Icons.Default.Download),
     )
     val showBars = currentRoute in tabs.map { it.route }
 
@@ -121,6 +130,9 @@ fun App(openEpisode: String? = null) {
             composable(Routes.COMPLETED) { ListScreen(Source.Completed, { nav.navigate(Routes.detail(it)) }) }
             composable(Routes.SCHEDULE) { ScheduleScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.SEARCH) { SearchScreen { nav.navigate(Routes.detail(it)) } }
+            composable(Routes.BOOKMARKS) { BookmarksScreen { nav.navigate(Routes.detail(it)) } }
+            composable(Routes.HISTORY) { HistoryScreen { nav.navigate(Routes.player(it)) } }
+            composable(Routes.DOWNLOADS) { DownloadsScreen() }
             composable(Routes.DETAIL) { entry ->
                 val animeId = entry.arguments?.getString("animeId").orEmpty()
                 DetailScreen(

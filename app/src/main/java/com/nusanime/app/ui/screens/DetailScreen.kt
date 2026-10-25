@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material3.*
@@ -38,13 +40,56 @@ class DetailViewModel(private val animeId: String) : ViewModel() {
     var loading by mutableStateOf(true)
     var error by mutableStateOf<String?>(null)
     var followed by mutableStateOf(false)
+    var bookmarked by mutableStateOf(false)
 
     init {
         load()
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val ctx = com.nusanime.app.MainApplication.instance
-                followed = com.nusanime.app.data.db.AppDatabase.get(ctx).followedDao().get(animeId) != null
+                val db = com.nusanime.app.data.db.AppDatabase.get(ctx)
+                followed = db.followedDao().get(animeId) != null
+                bookmarked = db.bookmarkDao().get(animeId) != null
+            } catch (_: Exception) {}
+        }
+    }
+
+    var trailerUrl by mutableStateOf<String?>(null)
+
+    init {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val t = com.nusanime.app.data.api.AnimeInApi.trailers(animeId).firstOrNull()
+            val raw = t?.url_youtube?.trim()?.takeIf { it.isNotBlank() } ?: return@launch
+            trailerUrl = when {
+                raw.startsWith("http", true) -> raw
+                raw.startsWith("www.", true) -> "https://$raw"
+                else -> "https://www.youtube.com/watch?v=$raw"
+            }
+        }
+    }
+
+    fun toggleBookmark() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val ctx = com.nusanime.app.MainApplication.instance
+                val db = com.nusanime.app.data.db.AppDatabase.get(ctx)
+                if (bookmarked) {
+                    db.bookmarkDao().delete(animeId)
+                    bookmarked = false
+                } else {
+                    val dd = detail
+                    if (dd != null) {
+                        db.bookmarkDao().upsert(
+                            com.nusanime.app.data.db.Bookmark(
+                                animeId = animeId,
+                                title = dd.title ?: animeId,
+                                poster = dd.poster,
+                                addedAt = System.currentTimeMillis(),
+                            )
+                        )
+                        bookmarked = true
+                    }
+                }
             } catch (_: Exception) {}
         }
     }
@@ -125,6 +170,14 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(d.title ?: "-", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                             val ctx = androidx.compose.ui.platform.LocalContext.current
+                            IconButton(onClick = { vm.toggleBookmark() }) {
+                                Icon(
+                                    if (vm.bookmarked) Icons.Filled.Bookmarks
+                                    else Icons.Filled.BookmarkBorder,
+                                    contentDescription = if (vm.bookmarked) "Hapus bookmark" else "Bookmark",
+                                    tint = if (vm.bookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                             IconButton(onClick = { vm.toggleFollow(ctx) }) {
                                 Icon(
                                     if (vm.followed) Icons.Filled.NotificationsActive
@@ -137,6 +190,18 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                         Spacer(Modifier.height(6.dp))
                         listOfNotNull(d.status, d.type, d.duration, d.season).forEach {
                             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        vm.trailerUrl?.let { url ->
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(onClick = {
+                                try {
+                                    ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                                } catch (_: Exception) {}
+                            }) {
+                                Icon(Icons.Filled.PlayArrow, null, Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Tonton Trailer")
+                            }
                         }
                     }
                 }

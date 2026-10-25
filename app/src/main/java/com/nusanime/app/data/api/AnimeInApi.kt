@@ -91,6 +91,10 @@ data class AxDistributor4(
     val season: List<AxMovie>? = null,
 )
 
+data class AxDistributor5(
+    val trailer: List<AnimeInApi.AxTrailer>? = null,
+)
+
 // ===== Client =====
 
 private data class AxEnvelope<T>(
@@ -275,6 +279,13 @@ object AnimeInApi {
             }
             out
         } catch (_: Exception) { emptyMap() }
+
+    data class AxTrailer(val id: String? = null, val title: String? = null, val url_youtube: String? = null)
+
+    suspend fun trailers(movieId: String): List<AxTrailer> =
+        try {
+            get("3/2/trailer/data", AxDistributor5::class.java, mapOf("id_movie" to movieId))?.trailer.orEmpty()
+        } catch (_: Exception) { emptyList() }
 
     suspend fun exploreBy(kind: String, id: String, page: Int = 0): List<AxMovie> {
         val path = when (kind) {

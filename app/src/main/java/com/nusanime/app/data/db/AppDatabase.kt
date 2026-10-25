@@ -63,10 +63,12 @@ interface FollowedDao {
     suspend fun delete(id: String)
 }
 
-@Database(entities = [WatchHistory::class, Followed::class], version = 1, exportSchema = false)
+@Database(entities = [WatchHistory::class, Followed::class, Bookmark::class, DownloadEntry::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun historyDao(): HistoryDao
     abstract fun followedDao(): FollowedDao
+    abstract fun bookmarkDao(): BookmarkDao
+    abstract fun downloadDao(): DownloadDao
 
     companion object {
         @Volatile private var instance: AppDatabase? = null
@@ -75,7 +77,7 @@ abstract class AppDatabase : RoomDatabase() {
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext, AppDatabase::class.java, "nusanime.db"
-                ).build().also { instance = it }
+                ).fallbackToDestructiveMigration().build().also { instance = it }
             }
     }
 }

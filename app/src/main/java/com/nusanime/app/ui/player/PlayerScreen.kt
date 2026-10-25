@@ -1,11 +1,13 @@
 package com.nusanime.app.ui.player
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -179,6 +181,38 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
                         Spacer(Modifier.height(16.dp))
                     }
 
+                    // Download options (direct links only)
+                    val dlLinks = serverList.filter { (_, quality) -> quality.isNotBlank() }
+                        .distinctBy { (s, _) -> s.serverId }
+                        .take(6)
+                    if (dlLinks.isNotEmpty()) {
+                        Text("Unduh Episode", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            dlLinks.forEach { (s, quality) ->
+                                OutlinedButton(onClick = {
+                                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                                    com.nusanime.app.download.DownloadManager.enqueue(
+                                        context = ctx,
+                                        episodeId = episodeId + "_" + (s.title ?: quality),
+                                        animeId = d.animeId ?: episodeId.substringBeforeLast("-episode"),
+                                        animeTitle = d.title ?: "Anime",
+                                        episodeLabel = d.title ?: "Episode",
+                                        poster = d.poster,
+                                        url = s.serverId ?: return@OutlinedButton,
+                                        quality = quality.ifBlank { null },
+                                    )
+                                    android.widget.Toast.makeText(ctx, "Unduhan dimulai", android.widget.Toast.LENGTH_SHORT).show()
+                                }) {
+                                    Icon(Icons.Default.Download, null, Modifier.size(16.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Unduh${if (quality.isNotBlank()) " $quality" else ""}")
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    }
+
                     Row(
                         Modifier.padding(top = 16.dp).fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -245,13 +279,62 @@ private fun PlayerArea(vm: PlayerViewModel) {
             if (pl.isPlaying) vm.saveProgress(context, pl.currentPosition, pl.duration.coerceAtLeast(0))
         }
     }
+
+    // Skip intro automatically: check aniskip once per URL, seek past op when reached
+    var skipIntro by remember(vm.playingUrl) { mutableStateOf<SkipIntro.Interval?>(null) }
+    LaunchedEffect(vm.playingUrl) {
+        val itv = SkipIntro.fetch(null, 0)
+        skipIntro = itv
+    }
+    LaunchedEffect(vm.playingUrl, skipIntro) {
+        val itv = skipIntro ?: return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(1_000)
+            val pl = player ?: break
+            if (pl.currentPosition >= itv.startMs && pl.currentPosition < itv.endMs - 500) {
+                pl.seekTo(itv.endMs)
+                break
+            }
+        }
+    }
     DisposableEffect(Unit) { onDispose { player?.release() } }
 
-    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black)) {
+    // Fullscreen mode: hide status bars, landscape, player fills screen
+    val activity = context as? android.app.Activity
+    var fullscreen by remember { mutableStateOf(false) }
+
+    fun enterFullscreen() {
+        fullscreen = true
+        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        activity?.window?.let { w ->
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w, false)
+            w.insetsController?.let { c ->
+                c.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                c.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        }
+    }
+
+    fun exitFullscreen() {
+        fullscreen = false
+        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        activity?.window?.insetsController?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+    }
+
+    BackHandler(enabled = fullscreen) { exitFullscreen() }
+
+    val playerModifier = if (fullscreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+    Box(playerModifier.background(androidx.compose.ui.graphics.Color.Black)) {
         val url = vm.playingUrl
         if (url != null && player != null) {
+            val pv = remember(url) {
+                PlayerView(context).apply {
+                    useController = true
+                    setFullscreenButtonClickListener { isFs -> if (isFs) enterFullscreen() else exitFullscreen() }
+                }
+            }
             AndroidView(
-                factory = { PlayerView(it).apply { useController = true } },
+                factory = { pv },
                 update = { it.player = player },
                 modifier = Modifier.fillMaxSize(),
             )
