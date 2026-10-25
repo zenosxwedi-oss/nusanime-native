@@ -35,22 +35,21 @@ class ListViewModel(private val source: Source) : ViewModel() {
         viewModelScope.launch {
             if (initial) loading = true
             error = try {
-                val env = when (source) {
-                    Source.Home -> ApiClient.api.home()
-                    Source.Ongoing -> ApiClient.api.ongoing(1)
-                    Source.Completed -> ApiClient.api.completed(1)
-                }
-                val list = when (source) {
-                    Source.Home -> env.data?.let { h ->
+                val list: List<AnimeItem>? = if (source == Source.Home) {
+                    val env: com.nusanime.app.data.model.Envelope<com.nusanime.app.data.model.HomeData> = ApiClient.api.home()
+                    val h = env.data
+                    if (env.status != "success" || h == null) null else
                         (h.recent?.animeList ?: emptyList()) +
                             (h.top10?.animeList ?: emptyList()) +
                             (h.batch?.animeList ?: emptyList()) +
                             (h.movie?.animeList ?: emptyList())
-                    }
-                    else -> env.data?.animeList
+                } else {
+                    val env: com.nusanime.app.data.model.Envelope<com.nusanime.app.data.model.ListData> =
+                        if (source == Source.Ongoing) ApiClient.api.ongoing(1) else ApiClient.api.completed(1)
+                    if (env.status != "success") null else env.data?.animeList
                 }
-                if (env.status != "success" || list == null)
-                    "Server tidak merespons dengan benar (${env.message ?: env.status ?: "data kosong"})"
+                if (list == null)
+                    "Server tidak merespons dengan benar"
                 else { items = list; if (initial) { page = 1; endReached = false }; null }
             } catch (e: Exception) {
                 "Gagal memuat: ${e.message ?: "kesalahan jaringan"}"
@@ -68,10 +67,8 @@ class ListViewModel(private val source: Source) : ViewModel() {
         viewModelScope.launch {
             try {
                 page += 1
-                val env = when (source) {
-                    Source.Ongoing -> ApiClient.api.ongoing(page)
-                    else -> ApiClient.api.completed(page)
-                }
+                val env: com.nusanime.app.data.model.Envelope<com.nusanime.app.data.model.ListData> =
+                    if (source == Source.Ongoing) ApiClient.api.ongoing(page) else ApiClient.api.completed(page)
                 val list = env.data?.animeList
                 if (env.status != "success" || list.isNullOrEmpty()) endReached = true
                 else items = items + list
