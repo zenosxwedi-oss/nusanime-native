@@ -22,10 +22,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 
 /**
@@ -34,20 +32,7 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun SplashScreen() {
-    var poster by remember { mutableStateOf<String?>(null) }
     var alpha by remember { mutableStateOf(0f) }
-
-    // Try to load a nice anime key visual (top popular) for the background
-    LaunchedEffect(Unit) {
-        try {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val h = com.nusanime.app.data.api.AnimeInApi.home()
-                val pick = (h?.popular ?: h?.hot ?: h?.update).orEmpty()
-                    .firstOrNull { !it.posterUrl.isNullOrBlank() }
-                poster = pick?.posterUrl
-            }
-        } catch (_: Exception) {}
-    }
 
     val transition = rememberInfiniteTransition(label = "dots")
     val dotAlpha by transition.animateFloat(
@@ -57,8 +42,8 @@ fun SplashScreen() {
         label = "dot",
     )
 
-    LaunchedEffect(poster) {
-        delay(80)
+    LaunchedEffect(Unit) {
+        delay(60)
         alpha = 1f
     }
 
@@ -67,20 +52,11 @@ fun SplashScreen() {
             .fillMaxSize()
             .background(Color(0xFF111318)),
     ) {
-        // Background art (or gradient fallback while loading)
+        // Gradient background (instant, no blank image)
         Box(
             Modifier
-                .fillMaxSize()
-                .alpha(if (poster != null) 1f else 0.4f),
+                .fillMaxSize(),
         ) {
-            if (poster != null) {
-                AsyncImage(
-                    model = poster,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
             Box(
                 Modifier
                     .fillMaxSize()

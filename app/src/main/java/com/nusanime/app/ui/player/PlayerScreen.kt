@@ -314,6 +314,11 @@ private fun PlayerArea(vm: PlayerViewModel) {
                 c.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
                 c.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
+            // cutout: let video render into notch area
+            activity?.window?.attributes?.let { a ->
+                a.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                activity.window.attributes = a
+            }
         } catch (_: Exception) {}
     }
 
