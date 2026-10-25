@@ -41,9 +41,9 @@ class DetailViewModel(private val animeId: String) : ViewModel() {
     fun load() {
         viewModelScope.launch {
             error = try {
-                val resp = ApiClient.api.detail(animeId)
-                val d = resp.body()
-                if (!resp.isSuccessful || d?.title == null) "Gagal memuat detail (${resp.code()})"
+                val env = ApiClient.api.detail(animeId)
+                val d = env.data
+                if (env.status != "success" || d?.title == null) "Gagal memuat detail (${env.message ?: env.status ?: "data kosong"})"
                 else { detail = d; null }
             } catch (e: Exception) {
                 "Gagal memuat detail: ${e.message ?: "kesalahan jaringan"}"

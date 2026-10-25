@@ -42,9 +42,9 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     fun load() {
         viewModelScope.launch {
             error = try {
-                val resp = ApiClient.api.episode(episodeId)
-                val d = resp.body()
-                if (!resp.isSuccessful || d?.title == null) "Gagal memuat episode (${resp.code()})"
+                val env = ApiClient.api.episode(episodeId)
+                val d = env.data
+                if (env.status != "success" || d?.title == null) "Gagal memuat episode (${env.message ?: env.status ?: "data kosong"})"
                 else {
                     data = d
                     playError = null
@@ -63,9 +63,9 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
         viewModelScope.launch {
             playError = null
             try {
-                val resp = ApiClient.api.server(serverId)
-                val url = resp.body()?.url
-                if (!resp.isSuccessful || url.isNullOrBlank()) playError = "Server tidak tersedia"
+                val env = ApiClient.api.server(serverId)
+                val url = env.data?.url
+                if (env.status != "success" || url.isNullOrBlank()) playError = "Server tidak tersedia"
                 else tryPlay(url)
             } catch (_: Exception) {
                 playError = "Gagal mengambil server"

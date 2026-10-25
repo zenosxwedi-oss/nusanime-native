@@ -33,9 +33,9 @@ class ScheduleViewModel : ViewModel() {
     fun load() {
         viewModelScope.launch {
             error = try {
-                val resp = ApiClient.api.schedule()
-                val d = resp.body()
-                if (!resp.isSuccessful || d?.days == null) "Server tidak merespons dengan benar (${resp.code()})"
+                val env = ApiClient.api.schedule()
+                val d = env.data
+                if (env.status != "success" || d?.days == null) "Server tidak merespons dengan benar (${env.message ?: env.status ?: "data kosong"})"
                 else { days = d; null }
             } catch (e: Exception) {
                 "Gagal memuat jadwal: ${e.message ?: "kesalahan jaringan"}"

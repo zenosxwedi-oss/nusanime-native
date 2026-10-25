@@ -42,9 +42,9 @@ class SearchViewModel : ViewModel() {
         viewModelScope.launch {
             loading = true
             error = try {
-                val resp = ApiClient.api.search(q.trim())
-                val list = (resp.body() as? com.nusanime.app.data.model.ListData)?.animeList
-                if (!resp.isSuccessful || list == null) "Server tidak merespons dengan benar (${resp.code()})"
+                val env = ApiClient.api.search(q.trim())
+                val list = env.data?.animeList
+                if (env.status != "success" || list == null) "Server tidak merespons dengan benar (${env.message ?: env.status ?: "data kosong"})"
                 else { results = list; searched = true; null }
             } catch (e: Exception) {
                 "Gagal mencari: ${e.message ?: "kesalahan jaringan"}"
