@@ -233,18 +233,18 @@ object AnimeInApi {
         val p = page.coerceAtLeast(0)
         // primary endpoint first, fall back to alternates like AnimeX does
         try {
-            val r = get("3/2/explore/movie", AxDistributor::class.java, mapOf("keyword" to query, "page" to "$p", "sort" to "views"))
-            if (!r.isNullOrEmpty()) return r
+            val r = get("3/2/explore/movie", AxDistributor::class.java, mapOf("keyword" to query, "page" to "$p", "sort" to "views"))?.movie.orEmpty()
+            if (r.isNotEmpty()) return r
         } catch (_: Exception) {}
         for (key in listOf("query", "q", "search", "title", "name")) {
             try {
-                val r = get("3/2/explore/movie", AxDistributor::class.java, mapOf(key to query, "page" to "$p", "sort" to "views"))
-                if (!r.isNullOrEmpty()) return r
+                val r = get("3/2/explore/movie", AxDistributor::class.java, mapOf(key to query, "page" to "$p", "sort" to "views"))?.movie.orEmpty()
+                if (r.isNotEmpty()) return r
             } catch (_: Exception) {}
         }
         try {
-            val r = get("data/movie/find", AxDistributor::class.java, mapOf("keyword" to query, "page" to "$p"))
-            if (!r.isNullOrEmpty()) return r
+            val r = get("data/movie/find", AxDistributor::class.java, mapOf("keyword" to query, "page" to "$p"))?.movie.orEmpty()
+            if (r.isNotEmpty()) return r
         } catch (_: Exception) {}
         return emptyList()
     }

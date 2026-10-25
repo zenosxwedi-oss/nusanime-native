@@ -28,6 +28,7 @@ object AxSource {
         type = type,
         score = rating,
         statusField = status,
+        estimation = null,
         genreList = genre?.split(",")?.mapNotNull { g ->
             val t = g.trim()
             if (t.isEmpty()) null else com.nusanime.app.data.model.Genre(title = t, genreId = t)
