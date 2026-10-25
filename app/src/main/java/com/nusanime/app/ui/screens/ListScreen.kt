@@ -90,13 +90,13 @@ fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (S
     when {
         vm.loading -> com.nusanime.app.ui.LoadingScreen()
         vm.error != null && vm.items.isEmpty() -> com.nusanime.app.ui.ErrorScreen(vm.error!!) { vm.load(initial = true) }
-        else -> PullToRefreshList(vm, onOpenDetail, onOpenEpisode)
+        else -> PullToRefreshList(vm, source, onOpenDetail, onOpenEpisode)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PullToRefreshList(vm: ListViewModel, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit) {
+private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit) {
     PullToRefreshBox(
         isRefreshing = vm.refreshing,
         onRefresh = { vm.refresh() },
@@ -109,6 +109,11 @@ private fun PullToRefreshList(vm: ListViewModel, onOpenDetail: (String) -> Unit,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (source == Source.Home) {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
+                    ContinueWatchingRow(onOpen = onOpenEpisode)
+                }
+            }
             items(vm.items.size) { i ->
                 val item = vm.items[i]
                 AnimeCard(item) {

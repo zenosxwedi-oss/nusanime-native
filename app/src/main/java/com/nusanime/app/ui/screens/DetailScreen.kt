@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,8 +37,41 @@ class DetailViewModel(private val animeId: String) : ViewModel() {
     var detail by mutableStateOf<DetailData?>(null)
     var loading by mutableStateOf(true)
     var error by mutableStateOf<String?>(null)
+    var followed by mutableStateOf(false)
 
-    init { load() }
+    init {
+        load()
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val ctx = com.nusanime.app.MainApplication.instance
+                followed = com.nusanime.app.data.db.AppDatabase.get(ctx).followedDao().get(animeId) != null
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun toggleFollow(context: android.content.Context) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val db = com.nusanime.app.data.db.AppDatabase.get(context)
+            val d = detail
+            if (followed) {
+                db.followedDao().delete(animeId)
+                followed = false
+            } else {
+                if (d != null) {
+                    db.followedDao().upsert(
+                        com.nusanime.app.data.db.Followed(
+                            animeId = animeId,
+                            title = d.title ?: animeId,
+                            poster = d.poster,
+                            lastEpisodeId = d.episodeList?.firstOrNull()?.episodeId,
+                            followedAt = System.currentTimeMillis(),
+                        )
+                    )
+                    followed = true
+                }
+            }
+        }
+    }
 
     fun load() {
         viewModelScope.launch {
@@ -87,7 +122,18 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                         modifier = Modifier.width(110.dp).aspectRatio(2f / 3f),
                     )
                     Column(Modifier.padding(start = 12.dp)) {
-                        Text(d.title ?: "-", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(d.title ?: "-", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            val ctx = androidx.compose.ui.platform.LocalContext.current
+                            IconButton(onClick = { vm.toggleFollow(ctx) }) {
+                                Icon(
+                                    if (vm.followed) Icons.Filled.NotificationsActive
+                                    else Icons.Filled.NotificationsNone,
+                                    contentDescription = if (vm.followed) "Berhenti ikuti" else "Ikuti",
+                                    tint = if (vm.followed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                         Spacer(Modifier.height(6.dp))
                         listOfNotNull(d.status, d.type, d.duration, d.season).forEach {
                             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

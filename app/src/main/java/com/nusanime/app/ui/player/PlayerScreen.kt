@@ -36,8 +36,31 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     var error by mutableStateOf<String?>(null)
     var playingUrl by mutableStateOf<String?>(null)
     var playError by mutableStateOf<String?>(null)
+    var resumePositionMs by mutableStateOf(0L)
+    var autoNext by mutableStateOf(false)
+    var onEnded: (() -> Unit)? = null
 
     init { load() }
+
+    /** Persist watch progress to Room. */
+    fun saveProgress(context: android.content.Context, positionMs: Long, durationMs: Long) {
+        val d = data ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val db = com.nusanime.app.data.db.AppDatabase.get(context)
+            db.historyDao().upsert(
+                com.nusanime.app.data.db.WatchHistory(
+                    episodeId = episodeId,
+                    animeId = d.animeId ?: "",
+                    animeTitle = d.title ?: "",
+                    poster = d.poster,
+                    episodeTitle = episodeId.substringAfterLast('-'),
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    updatedAt = System.currentTimeMillis(),
+                )
+            )
+        }
+    }
 
     fun load() {
         viewModelScope.launch {
@@ -48,6 +71,14 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
                 else {
                     data = d
                     playError = null
+                    // restore resume position from history
+                    try {
+                        val ctx = com.nusanime.app.MainApplication.instance
+                        val h = com.nusanime.app.data.db.AppDatabase.get(ctx).historyDao().get(episodeId)
+                        if (h != null && h.durationMs > 0 && h.positionMs < h.durationMs - 15000) {
+                            resumePositionMs = h.positionMs
+                        }
+                    } catch (_: Exception) {}
                     d.defaultStreamingUrl?.let { tryPlay(it) }
                     null
                 }
@@ -148,6 +179,18 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
                         Spacer(Modifier.height(16.dp))
                     }
 
+                    Row(
+                        Modifier.padding(top = 16.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Lanjut otomatis", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        Switch(checked = vm.autoNext, onCheckedChange = { vm.autoNext = it })
+                    }
+                    if (vm.autoNext) {
+                        vm.onEnded = { d.nextEpisode?.episodeId?.let(onOpenEpisode) }
+                    }
+
                     val prev = d.prevEpisode?.episodeId
                     val next = d.nextEpisode?.episodeId
                     if (prev != null || next != null) {
@@ -179,11 +222,27 @@ private fun PlayerArea(vm: PlayerViewModel) {
                     vm.playError = "Gagal memutar: " + (error.errorCodeName ?: error.message ?: "unknown")
                     vm.playingUrl = null
                 }
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == androidx.media3.common.Player.STATE_ENDED) {
+                        vm.saveProgress(context, 0, 0)
+                        if (vm.autoNext) vm.onEnded?.invoke()
+                    }
+                }
             })
             p.setMediaItem(MediaItem.fromUri(url))
+            if (vm.resumePositionMs > 0) p.seekTo(vm.resumePositionMs)
             p.prepare()
             p.playWhenReady = true
             player = p
+        }
+    }
+
+    // Save progress every 10s while playing
+    LaunchedEffect(vm.playingUrl) {
+        while (true) {
+            kotlinx.coroutines.delay(10_000)
+            val pl = player ?: break
+            if (pl.isPlaying) vm.saveProgress(context, pl.currentPosition, pl.duration.coerceAtLeast(0))
         }
     }
     DisposableEffect(Unit) { onDispose { player?.release() } }

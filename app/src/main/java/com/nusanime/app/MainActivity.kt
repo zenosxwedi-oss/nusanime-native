@@ -39,12 +39,26 @@ object Routes {
 private data class BottomItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
 class MainActivity : ComponentActivity() {
+    private var deepLinkEpisode: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        com.nusanime.app.notify.EpisodeNotifier.ensureChannel(this)
+        com.nusanime.app.notify.EpisodeNotifier.schedule(this)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
+        deepLinkEpisode = intent?.getStringExtra("openEpisode")
+        if (deepLinkEpisode != null) {
+            startActivity(android.content.Intent(this, MainActivity::class.java).apply {
+                putExtra("openEpisode", deepLinkEpisode)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            })
+        }
         setContent {
             NusanimeTheme {
-                App()
+                App(openEpisode = deepLinkEpisode)
             }
         }
     }
@@ -52,10 +66,14 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun App() {
+fun App(openEpisode: String? = null) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
+
+    androidx.compose.runtime.LaunchedEffect(openEpisode) {
+        if (openEpisode != null) nav.navigate(Routes.player(openEpisode))
+    }
 
     val tabs = listOf(
         BottomItem(Routes.HOME, "Beranda", Icons.Default.Home),
