@@ -192,6 +192,7 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             dlLinks.forEach { (s, quality) ->
                                 OutlinedButton(onClick = {
+                                    if (s.serverId.isNullOrBlank()) return@OutlinedButton
                                     com.nusanime.app.download.DownloadManager.enqueue(
                                         context = dlCtx,
                                         episodeId = episodeId + "_" + (s.title ?: quality),
@@ -199,7 +200,7 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
                                         animeTitle = d.title ?: "Anime",
                                         episodeLabel = d.title ?: "Episode",
                                         poster = d.poster,
-                                        url = s.serverId ?: return@forEach,
+                                        url = s.serverId ?: "",
                                         quality = quality.ifBlank { null },
                                     )
                                     android.widget.Toast.makeText(dlCtx, "Unduhan dimulai", android.widget.Toast.LENGTH_SHORT).show()
