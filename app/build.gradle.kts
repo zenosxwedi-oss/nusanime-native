@@ -13,13 +13,25 @@ android {
         applicationId = "com.nusanime.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 15
-        versionName = "3.4.0"
+        versionCode = 16
+        versionName = "3.4.1"
     }
 
+    signingConfigs {
+        create("appSign") {
+            storeFile = file("nusanime.keystore")
+            storePassword = "nusanime2026"
+            keyAlias = "nusanime"
+            keyPassword = "nusanime2026"
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("appSign")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("appSign")
         }
     }
     compileOptions {
