@@ -90,13 +90,13 @@ fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (S
     when {
         vm.loading -> com.nusanime.app.ui.LoadingScreen()
         vm.error != null && vm.items.isEmpty() -> com.nusanime.app.ui.ErrorScreen(vm.error!!) { vm.load(initial = true) }
-        else -> PullToRefreshList(vm, onOpenDetail)
+        else -> PullToRefreshList(vm, onOpenDetail, onOpenEpisode)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PullToRefreshList(vm: ListViewModel, onOpenDetail: (String) -> Unit) {
+private fun PullToRefreshList(vm: ListViewModel, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit) {
     PullToRefreshBox(
         isRefreshing = vm.refreshing,
         onRefresh = { vm.refresh() },
