@@ -74,16 +74,7 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     }
 
     private fun tryPlay(url: String) {
-        if (FiledonStream.isFiledon(url)) {
-            viewModelScope.launch {
-                val direct = FiledonStream.extract(url)
-                if (direct != null) playingUrl = direct
-                else {
-                    playingUrl = null
-                    playError = "Gagal mengambil stream VIP. Coba server lain."
-                }
-            }
-        } else if (BloggerStream.isBlogger(url)) {
+        if (BloggerStream.isBlogger(url)) {
             viewModelScope.launch {
                 val direct = BloggerStream.extract(url)
                 if (direct != null) playingUrl = direct
@@ -141,6 +132,7 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
                     val serverList = d.server?.qualities.orEmpty()
                         .flatMap { q -> q.serverList.orEmpty().map { it to q.title.orEmpty() } }
                         .filter { (s, _) -> s.serverId != null }
+                        .filter { (s, _) -> !(s.title ?: "").contains("VIP", true) }
                     if (serverList.isNotEmpty()) {
                         Text("Server Streaming", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
