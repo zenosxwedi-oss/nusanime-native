@@ -19,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -253,7 +255,7 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
         }
         item {
             val recs = remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
-            androidx.compose.runtime.LaunchedEffect(d.animeId) {
+            androidx.compose.runtime.LaunchedEffect(animeId) {
                 try {
                     val env = com.nusanime.app.data.api.AxSource.home()
                     val h = env.data
@@ -270,7 +272,7 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(recs.value, key = { it.animeId ?: it.title }) { r ->
+                    items(recs.value, key = { it.animeId ?: it.title ?: "" }) { r ->
                         Column(Modifier.width(110.dp).clickable { r.animeId?.let { id -> onOpenDetail(id) } }) {
                             AsyncImage(
                                 model = r.poster,

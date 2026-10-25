@@ -304,13 +304,13 @@ private fun PlayerArea(vm: PlayerViewModel) {
                     for (sv in q.serverList.orEmpty()) {
                         item {
                             androidx.compose.material3.FilledTonalButton(
-                                onClick = { vm.playServer(sv.serverId) },
+                                onClick = { sv.serverId?.let { vm.playServer(it) } },
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                                 colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
                                     containerColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.55f),
                                     contentColor = androidx.compose.ui.graphics.Color.White,
                                 ),
-                            ) { Text(q.label ?: sv.label ?: "OK", style = MaterialTheme.typography.labelSmall) }
+                            ) { Text(q.title ?: sv.title ?: "OK", style = MaterialTheme.typography.labelSmall) }
                         }
                     }
                 }
