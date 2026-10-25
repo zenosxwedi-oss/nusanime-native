@@ -158,7 +158,7 @@ fun App(openEpisode: String? = null) {
     ) { pad ->
         NavHost(
             navController = nav,
-            startDestination = Routes.HOME,
+            startDestination = "splash",
             modifier = Modifier.padding(pad),
         ) {
             composable(Routes.HOME) { ListScreen(Source.Home, { nav.navigate(Routes.detail(it)) }) { nav.navigate(Routes.player(it)) } }
@@ -170,6 +170,13 @@ fun App(openEpisode: String? = null) {
             composable(Routes.HISTORY) { HistoryScreen { nav.navigate(Routes.player(it)) } }
             composable(Routes.DOWNLOADS) { DownloadsScreen() }
             composable(Routes.SETTINGS) { SettingsScreen() }
+            composable("splash") {
+                com.nusanime.app.ui.screens.SplashScreen()
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(2000)
+                    nav.navigate(Routes.HOME) { popUpTo("splash") { inclusive = true } }
+                }
+            }
             composable(Routes.DETAIL) { entry ->
                 val animeId = entry.arguments?.getString("animeId").orEmpty()
                 DetailScreen(

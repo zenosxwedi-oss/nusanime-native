@@ -55,15 +55,23 @@ object AxSource {
     }
 
     suspend fun ongoing(page: Int = 1): Envelope<ListData> {
-        // Primary: explore by type id 6 (SERIES); fallback: latest list filtered by type
+        // Primary: explore by type id 6 (SERIES); fallback: latest list filtered; last resort: home update list
         var r = AnimeInApi.exploreBy("type", "6", page - 1)
         if (r.isEmpty()) r = AnimeInApi.exploreLatest(page - 1, typeFilter = "series")
+        if (r.isEmpty() && page == 1) {
+            val h = AnimeInApi.home()
+            r = (h?.update ?: h?.new).orEmpty()
+        }
         return Envelope(status = "success", data = ListData(animeList = r.map { it.toItem() }))
     }
 
     suspend fun completed(page: Int = 1): Envelope<ListData> {
         var r = AnimeInApi.exploreBy("type", "2", page - 1)
         if (r.isEmpty()) r = AnimeInApi.exploreLatest(page - 1, statusFilter = "completed")
+        if (r.isEmpty() && page == 1) {
+            val h = AnimeInApi.home()
+            r = (h?.popular ?: h?.hot).orEmpty()
+        }
         return Envelope(status = "success", data = ListData(animeList = r.map { it.toItem() }))
     }
 

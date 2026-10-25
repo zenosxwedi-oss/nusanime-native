@@ -305,21 +305,28 @@ private fun PlayerArea(vm: PlayerViewModel) {
     var fullscreen by remember { mutableStateOf(false) }
 
     fun enterFullscreen() {
-        fullscreen = true
-        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        activity?.window?.let { w ->
-            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w, false)
-            w.insetsController?.let { c ->
+        try {
+            fullscreen = true
+            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            activity?.window?.let { w ->
+                androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w, false)
+                val c = androidx.core.view.WindowInsetsControllerCompat(w, w.decorView)
                 c.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
                 c.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
-        }
+        } catch (_: Exception) {}
     }
 
     fun exitFullscreen() {
-        fullscreen = false
-        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        activity?.window?.insetsController?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        try {
+            fullscreen = false
+            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            activity?.window?.let { w ->
+                val c = androidx.core.view.WindowInsetsControllerCompat(w, w.decorView)
+                c.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w, true)
+            }
+        } catch (_: Exception) {}
     }
 
     BackHandler(enabled = fullscreen) { exitFullscreen() }

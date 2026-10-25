@@ -113,6 +113,12 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
                     ContinueWatchingRow(onOpen = onOpenEpisode)
                 }
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
+                    LatestSlider(items = vm.items.take(10), onOpen = { item ->
+                        val ep = item.episodeId
+                        if (ep != null) onOpenEpisode(ep) else item.animeId?.let(onOpenDetail)
+                    })
+                }
             }
             items(vm.items.size) { i ->
                 val item = vm.items[i]
