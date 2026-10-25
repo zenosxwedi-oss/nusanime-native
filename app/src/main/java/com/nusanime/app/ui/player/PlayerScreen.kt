@@ -40,6 +40,7 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     var playError by mutableStateOf<String?>(null)
     var resumePositionMs by mutableStateOf(0L)
     var autoNext by mutableStateOf(false)
+    var fullscreen by mutableStateOf(false)
     var onEnded: (() -> Unit)? = null
 
     init { load() }
@@ -144,6 +145,13 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
         factory = viewModelFactory { initializer { PlayerViewModel(episodeId) } },
     )
 
+    if (vm.fullscreen) {
+        // True fullscreen: only the video, edge to edge
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black)) {
+            PlayerArea(vm)
+        }
+        return
+    }
     Scaffold(topBar = {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali") }
@@ -302,11 +310,10 @@ private fun PlayerArea(vm: PlayerViewModel) {
 
     // Fullscreen mode: hide status bars, landscape, player fills screen
     val activity = context as? android.app.Activity
-    var fullscreen by remember { mutableStateOf(false) }
 
     fun enterFullscreen() {
         try {
-            fullscreen = true
+            vm.fullscreen = true
             activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             activity?.window?.let { w ->
                 androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w, false)
@@ -324,7 +331,7 @@ private fun PlayerArea(vm: PlayerViewModel) {
 
     fun exitFullscreen() {
         try {
-            fullscreen = false
+            vm.fullscreen = false
             activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             activity?.window?.let { w ->
                 val c = androidx.core.view.WindowInsetsControllerCompat(w, w.decorView)
@@ -334,9 +341,9 @@ private fun PlayerArea(vm: PlayerViewModel) {
         } catch (_: Exception) {}
     }
 
-    BackHandler(enabled = fullscreen) { exitFullscreen() }
+    BackHandler(enabled = vm.fullscreen) { exitFullscreen() }
 
-    val playerModifier = if (fullscreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+    val playerModifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
     Box(playerModifier.background(androidx.compose.ui.graphics.Color.Black)) {
         val url = vm.playingUrl
         if (url != null && player != null) {
