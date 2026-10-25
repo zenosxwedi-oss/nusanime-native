@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Subscriptions
@@ -36,6 +37,7 @@ object Routes {
     const val BOOKMARKS = "bookmarks"
     const val HISTORY = "history"
     const val DOWNLOADS = "downloads"
+    const val SETTINGS = "settings"
     const val DETAIL = "detail/{animeId}"
     const val PLAYER = "player/{episodeId}"
     fun detail(animeId: String) = "detail/$animeId"
@@ -81,6 +83,36 @@ fun App(openEpisode: String? = null) {
         if (openEpisode != null) nav.navigate(Routes.player(openEpisode))
     }
 
+    // Auto-check update on launch (once)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var updateInfo by remember { mutableStateOf<com.nusanime.app.update.SelfUpdater.ReleaseInfo?>(null) }
+    var updateDismissed by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val info = com.nusanime.app.update.SelfUpdater.latest(ctx)
+                val cur = com.nusanime.app.update.SelfUpdater.currentVersionName(ctx)
+                if (info != null && com.nusanime.app.update.SelfUpdater.isNewer(info.versionName, cur)) {
+                    updateInfo = info
+                }
+            } catch (_: Exception) {}
+        }
+    }
+    updateInfo?.takeIf { !updateDismissed }?.let { info ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { updateDismissed = true },
+            title = { Text("Pembaruan tersedia") },
+            text = { Text("Versi baru v${info.versionName} tersedia. Unduh sekarang?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    updateDismissed = true
+                    nav.navigate(Routes.SETTINGS)
+                }) { Text("Buka Unduhan") }
+            },
+            dismissButton = { TextButton(onClick = { updateDismissed = true }) { Text("Nanti") } },
+        )
+    }
+
     val tabs = listOf(
         BottomItem(Routes.HOME, "Beranda", Icons.Default.Home),
         BottomItem(Routes.ONGOING, "Ongoing", Icons.Default.Subscriptions),
@@ -90,6 +122,7 @@ fun App(openEpisode: String? = null) {
         BottomItem(Routes.BOOKMARKS, "Simpan", Icons.Default.Bookmarks),
         BottomItem(Routes.HISTORY, "Riwayat", Icons.Default.History),
         BottomItem(Routes.DOWNLOADS, "Unduhan", Icons.Default.Download),
+        BottomItem(Routes.SETTINGS, "Setelan", Icons.Default.Settings),
     )
     val showBars = currentRoute in tabs.map { it.route }
 
@@ -133,6 +166,7 @@ fun App(openEpisode: String? = null) {
             composable(Routes.BOOKMARKS) { BookmarksScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.HISTORY) { HistoryScreen { nav.navigate(Routes.player(it)) } }
             composable(Routes.DOWNLOADS) { DownloadsScreen() }
+            composable(Routes.SETTINGS) { SettingsScreen() }
             composable(Routes.DETAIL) { entry ->
                 val animeId = entry.arguments?.getString("animeId").orEmpty()
                 DetailScreen(
