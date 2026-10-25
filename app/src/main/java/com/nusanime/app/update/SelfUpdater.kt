@@ -66,26 +66,54 @@ object SelfUpdater {
         return false
     }
 
-    suspend fun downloadApk(context: Context, url: String): File? = withContext(Dispatchers.IO) {
+    suspend fun downloadApk(
+        context: Context,
+        url: String,
+        onProgress: (Long, Long) -> Unit = { _, _ -> },
+    ): File? = withContext(Dispatchers.IO) {
+        var current = url
         try {
-            val dir = File(context.getExternalFilesDir("updates"), "").apply { mkdirs() }
-            val out = File(dir, "nusanime-update.apk")
-            val conn = URL(url).openConnection() as HttpURLConnection
-            conn.connectTimeout = 15000
-            conn.readTimeout = 30000
-            conn.setRequestProperty("User-Agent", "okhttp/4.12.0")
-            conn.instanceFollowRedirects = true
-            try {
-                if (conn.responseCode !in 200..299) return@withContext null
-                conn.inputStream.use { ins -> out.outputStream().use { fos -> ins.copyTo(fos) } }
-                out
-            } finally {
+            repeat(5) {
+                val conn = URL(current).openConnection() as HttpURLConnection
+                conn.connectTimeout = 15000
+                conn.readTimeout = 30000
+                conn.setRequestProperty("User-Agent", "okhttp/4.12.0")
+                conn.instanceFollowRedirects = false
+                val code = conn.responseCode
+                if (code in 300..399) {
+                    val loc = conn.getHeaderField("Location")
+                    conn.disconnect()
+                    if (loc.isNullOrBlank()) return@withContext null
+                    current = loc
+                    return@repeat
+                }
+                if (code !in 200..299) return@withContext null
+                val total = conn.contentLengthLong
+                val input = conn.inputStream
+                var done = 0L
+                input.use { ins ->
+                    File(makeOutDir(context), "nusanime-update.apk").outputStream().use { fos ->
+                        val buf = ByteArray(128 * 1024)
+                        while (true) {
+                            val n = ins.read(buf)
+                            if (n < 0) break
+                            fos.write(buf, 0, n)
+                            done += n
+                            onProgress(done, total)
+                        }
+                    }
+                }
                 conn.disconnect()
+                return@withContext File(makeOutDir(context), "nusanime-update.apk")
             }
-        } catch (_: Exception) {
+            null
+        } catch (e: Exception) {
             null
         }
     }
+
+    private fun makeOutDir(context: Context): File =
+        File(context.getExternalFilesDir("updates"), "").apply { mkdirs() }
 
     fun install(context: Context, apk: File) {
         try {

@@ -20,6 +20,7 @@ fun SettingsScreen() {
     var checking by remember { mutableStateOf(false) }
     var downloading by remember { mutableStateOf(false) }
     var progressNote by remember { mutableStateOf<String?>(null) }
+    var dlProgress by remember { mutableStateOf(0f) }
     var remote by remember { mutableStateOf<SelfUpdater.ReleaseInfo?>(null) }
 
     Column(
@@ -68,21 +69,35 @@ fun SettingsScreen() {
                 onClick = {
                     scope.launch {
                         downloading = true
-                        progressNote = "Mengunduh APK…"
-                        val f = SelfUpdater.downloadApk(ctx, info.apkUrl)
+                        dlProgress = 0f
+                        progressNote = "Mengunduh v${info.versionName}…"
+                        val f = SelfUpdater.downloadApk(ctx, info.apkUrl) { done, total ->
+                            if (total > 0) dlProgress = (done.toFloat() / total).coerceIn(0f, 1f)
+                        }
                         downloading = false
                         progressNote = null
                         if (f != null) {
-                            status = "Unduhan selesai — buka file untuk install"
+                            status = "Unduhan selesai — membuka installer…"
                             SelfUpdater.install(ctx, f)
                         } else {
-                            status = "Gagal mengunduh APK"
+                            status = "Gagal mengunduh APK. Coba lagi atau cek koneksi."
                         }
                     }
                 },
             ) { Text(if (downloading) "Mengunduh…" else "Unduh & Install v${info.versionName}") }
         }
 
+        if (downloading) {
+            LinearProgressIndicator(
+                progress = { dlProgress },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                if (dlProgress > 0f) "${(dlProgress * 100).toInt()}%" else "Menyiapkan unduhan…",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         progressNote?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         status?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
