@@ -41,6 +41,8 @@ object BloggerStream {
         conn.connectTimeout = 15000
         conn.readTimeout = 20000
         conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
+        conn.setRequestProperty("Referer", "https://www.blogger.com/")
+        conn.setRequestProperty("Accept", "*/*")
         val code = conn.responseCode
         if (code !in 200..299) throw RuntimeException("HTTP $code")
         return conn.inputStream.bufferedReader().use { it.readText() }

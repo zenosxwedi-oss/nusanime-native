@@ -147,23 +147,6 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
                         Spacer(Modifier.height(16.dp))
                     }
 
-                    val gofile = flattenDownloads(d.downloadUrl).filter { it.second.contains("gofile.io") }
-                    if (gofile.isNotEmpty()) {
-                        Text("Gofile (360p–1080p)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        gofile.forEach { (label, url) -> DownloadLinkRow(label, url) }
-                        Spacer(Modifier.height(16.dp))
-                    }
-
-                    val downloads = flattenDownloads(d.downloadUrl)
-                    if (downloads.isNotEmpty()) {
-                        Text("Download", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        downloads.forEach { (label, url) ->
-                            DownloadLinkRow(label, url)
-                        }
-                    }
-
                     val prev = d.prevEpisode?.episodeId
                     val next = d.nextEpisode?.episodeId
                     if (prev != null || next != null) {
@@ -190,6 +173,12 @@ private fun PlayerArea(vm: PlayerViewModel) {
         player = null
         if (url != null) {
             val p = ExoPlayer.Builder(context).build()
+            p.addListener(object : androidx.media3.common.Player.Listener {
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    vm.playError = "Gagal memutar: " + (error.errorCodeName ?: error.message ?: "unknown")
+                    vm.playingUrl = null
+                }
+            })
             p.setMediaItem(MediaItem.fromUri(url))
             p.prepare()
             p.playWhenReady = true

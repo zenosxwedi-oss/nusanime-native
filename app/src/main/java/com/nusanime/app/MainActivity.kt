@@ -98,8 +98,8 @@ fun App() {
             startDestination = Routes.HOME,
             modifier = Modifier.padding(pad),
         ) {
-            composable(Routes.HOME) { ListScreen(Source.Home) { nav.navigate(Routes.detail(it)) } }
-            composable(Routes.ONGOING) { ListScreen(Source.Ongoing) { nav.navigate(Routes.detail(it)) } }
+            composable(Routes.HOME) { ListScreen(Source.Home, { nav.navigate(Routes.detail(it)) }) { nav.navigate(Routes.player(it)) } }
+            composable(Routes.ONGOING) { ListScreen(Source.Ongoing, { nav.navigate(Routes.detail(it)) }) { nav.navigate(Routes.player(it)) } }
             composable(Routes.COMPLETED) { ListScreen(Source.Completed) { nav.navigate(Routes.detail(it)) } }
             composable(Routes.SCHEDULE) { ScheduleScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.SEARCH) { SearchScreen { nav.navigate(Routes.detail(it)) } }

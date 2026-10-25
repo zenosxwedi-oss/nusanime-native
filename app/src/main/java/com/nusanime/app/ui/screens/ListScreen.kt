@@ -81,7 +81,7 @@ class ListViewModel(private val source: Source) : ViewModel() {
 }
 
 @Composable
-fun ListScreen(source: Source, onOpenDetail: (String) -> Unit) {
+fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit = {}) {
     val vm: ListViewModel = viewModel(
         key = when (source) { Source.Home -> "home"; Source.Ongoing -> "ongoing"; else -> "completed" },
         factory = viewModelFactory { initializer { ListViewModel(source) } },
@@ -111,7 +111,10 @@ private fun PullToRefreshList(vm: ListViewModel, onOpenDetail: (String) -> Unit)
         ) {
             items(vm.items.size) { i ->
                 val item = vm.items[i]
-                AnimeCard(item) { item.animeId?.let(onOpenDetail) }
+                AnimeCard(item) {
+                    val ep = item.episodeId
+                    if (ep != null) onOpenEpisode(ep) else item.animeId?.let(onOpenDetail)
+                }
                 if (i >= vm.items.size - 6) LaunchedEffect(i, vm.items.size) { vm.loadMore() }
             }
             if (vm.loadingMore) {
