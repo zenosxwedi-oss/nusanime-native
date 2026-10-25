@@ -287,6 +287,17 @@ object AnimeInApi {
             get("3/2/trailer/data", AxDistributor5::class.java, mapOf("id_movie" to movieId))?.trailer.orEmpty()
         } catch (_: Exception) { emptyList() }
 
+    /** Latest releases (sort=latest). Optional client-side filters for status/type. */
+    suspend fun exploreLatest(page: Int = 0, typeFilter: String? = null, statusFilter: String? = null): List<AxMovie> {
+        val raw = try {
+            get("3/2/explore/movie", AxDistributor::class.java, mapOf("page" to "$page", "sort" to "latest", "limit" to "60"))?.movie.orEmpty()
+        } catch (_: Exception) { emptyList() }
+        return raw.filter { m ->
+            (typeFilter == null || m.type?.contains(typeFilter, true) == true) &&
+                (statusFilter == null || m.status?.contains(statusFilter, true) == true)
+        }
+    }
+
     suspend fun exploreBy(kind: String, id: String, page: Int = 0): List<AxMovie> {
         val path = when (kind) {
             "genre" -> "3/2/explore/movie_genre" to "id_genre"

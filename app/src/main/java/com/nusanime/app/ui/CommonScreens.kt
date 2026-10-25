@@ -11,7 +11,23 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LoadingScreen(modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "N",
+                style = MaterialTheme.typography.displayLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "NUSANIME",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(20.dp))
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 

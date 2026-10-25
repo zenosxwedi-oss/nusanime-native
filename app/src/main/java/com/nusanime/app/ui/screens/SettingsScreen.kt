@@ -29,6 +29,18 @@ fun SettingsScreen() {
         Text("Pengaturan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Text("Versi aplikasi: $current", color = MaterialTheme.colorScheme.onSurfaceVariant)
 
+        // Theme mode selector
+        val ctxTheme = LocalContext.current
+        var themeMode by remember { mutableStateOf(com.nusanime.app.ui.theme.ThemePrefs.mode(ctxTheme)) }
+        Text("Tema", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = themeMode == 0, onClick = { themeMode = 0; com.nusanime.app.ui.theme.ThemePrefs.setMode(ctxTheme, 0); (ctxTheme as? android.app.Activity)?.recreate() }, label = { Text("Sistem") })
+            FilterChip(selected = themeMode == 1, onClick = { themeMode = 1; com.nusanime.app.ui.theme.ThemePrefs.setMode(ctxTheme, 1); (ctxTheme as? android.app.Activity)?.recreate() }, label = { Text("Terang") })
+            FilterChip(selected = themeMode == 2, onClick = { themeMode = 2; com.nusanime.app.ui.theme.ThemePrefs.setMode(ctxTheme, 2); (ctxTheme as? android.app.Activity)?.recreate() }, label = { Text("Gelap") })
+        }
+
+        Spacer(Modifier.height(8.dp))
+
         Button(
             enabled = !checking && !downloading,
             onClick = {

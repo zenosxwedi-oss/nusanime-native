@@ -328,14 +328,15 @@ private fun PlayerArea(vm: PlayerViewModel) {
     Box(playerModifier.background(androidx.compose.ui.graphics.Color.Black)) {
         val url = vm.playingUrl
         if (url != null && player != null) {
-            val pv = remember(url) {
-                PlayerView(context).apply {
-                    useController = true
-                    setFullscreenButtonClickListener { isFs -> if (isFs) enterFullscreen() else exitFullscreen() }
-                }
-            }
             AndroidView(
-                factory = { pv },
+                factory = {
+                    PlayerView(it).apply {
+                        useController = true
+                        setFullscreenButtonClickListener { isFs ->
+                            if (isFs) enterFullscreen() else exitFullscreen()
+                        }
+                    }
+                },
                 update = { it.player = player },
                 modifier = Modifier.fillMaxSize(),
             )

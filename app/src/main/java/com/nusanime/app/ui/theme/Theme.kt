@@ -55,10 +55,28 @@ private val DarkColors = darkColorScheme(
     outline = Color(0xFF8E9099),
 )
 
+// Theme mode persisted: 0 = system, 1 = light, 2 = dark
+object ThemePrefs {
+    private const val PREFS = "theme_prefs"
+    private const val KEY = "mode"
+    fun mode(context: android.content.Context): Int =
+        context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getInt(KEY, 0)
+    fun setMode(context: android.content.Context, value: Int) {
+        context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putInt(KEY, value).apply()
+    }
+}
+
 @Composable
 fun NusanimeTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val mode = remember { ThemePrefs.mode(ctx) }
+    val useDark = when (mode) {
+        1 -> false
+        2 -> true
+        else -> darkTheme
+    }
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = if (useDark) DarkColors else LightColors,
         content = content,
     )
 }
