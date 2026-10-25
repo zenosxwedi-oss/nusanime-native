@@ -74,7 +74,16 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     }
 
     private fun tryPlay(url: String) {
-        if (BloggerStream.isBlogger(url)) {
+        if (FiledonStream.isFiledon(url)) {
+            viewModelScope.launch {
+                val direct = FiledonStream.extract(url)
+                if (direct != null) playingUrl = direct
+                else {
+                    playingUrl = null
+                    playError = "Gagal mengambil stream VIP. Coba server lain."
+                }
+            }
+        } else if (BloggerStream.isBlogger(url)) {
             viewModelScope.launch {
                 val direct = BloggerStream.extract(url)
                 if (direct != null) playingUrl = direct

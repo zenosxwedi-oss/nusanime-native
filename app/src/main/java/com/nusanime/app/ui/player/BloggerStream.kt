@@ -36,13 +36,46 @@ object BloggerStream {
         }
     }
 
-    private fun httpGet(url: String): String {
+    private fun httpGet(url: String, referer: String = "https://www.blogger.com/"): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.connectTimeout = 15000
         conn.readTimeout = 20000
         conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
-        conn.setRequestProperty("Referer", "https://www.blogger.com/")
+        conn.setRequestProperty("Referer", referer)
         conn.setRequestProperty("Accept", "*/*")
+        val code = conn.responseCode
+        if (code !in 200..299) throw RuntimeException("HTTP $code")
+        return conn.inputStream.bufferedReader().use { it.readText() }
+    }
+}
+
+/**
+ * Filedon (VIP server): the embed page (fetched with a samehadaku Referer) embeds a
+ * presigned Cloudflare R2 direct media URL, valid ~1 hour, IP-bound to the fetcher.
+ */
+object FiledonStream {
+    private const val BS = "\\"
+
+    fun isFiledon(url: String): Boolean = url.contains("filedon.co/")
+
+    suspend fun extract(embedUrl: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val html = httpGet(embedUrl, referer = "https://v2.samehadaku.how/")
+                .replace("&amp;", "&")
+                .replace(BS + "/", "/")
+            val re = Regex("\"url\"\s*:\s*\"(https://[^\"]*r2\.cloudflarestorage\.com[^\"]*?)\"\s*,\s*\"media\"")
+            re.find(html)?.groupValues?.get(1)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun httpGet(url: String, referer: String): String {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        conn.connectTimeout = 15000
+        conn.readTimeout = 20000
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
+        conn.setRequestProperty("Referer", referer)
         val code = conn.responseCode
         if (code !in 200..299) throw RuntimeException("HTTP $code")
         return conn.inputStream.bufferedReader().use { it.readText() }
