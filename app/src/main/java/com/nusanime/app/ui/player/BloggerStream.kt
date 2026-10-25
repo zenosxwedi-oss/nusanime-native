@@ -63,7 +63,7 @@ object FiledonStream {
             val html = httpGet(embedUrl, referer = "https://v2.samehadaku.how/")
                 .replace("&amp;", "&")
                 .replace(BS + "/", "/")
-            val re = Regex("\"url\"\s*:\s*\"(https://[^\"]*r2\.cloudflarestorage\.com[^\"]*?)\"\s*,\s*\"media\"")
+            val re = Regex("url" + "\\s*:\\s*" + "\\u0022(https://[^\\u0022]*r2\\.cloudflarestorage\\.com[^\\u0022]*?)" + "\\s*,\\s*" + "\\u0022media\\u0022")
             re.find(html)?.groupValues?.get(1)
         } catch (_: Exception) {
             null
