@@ -33,7 +33,7 @@ class ScheduleViewModel : ViewModel() {
     fun load() {
         viewModelScope.launch {
             error = try {
-                val env = ApiClient.api.schedule()
+                val env = com.nusanime.app.data.api.AxSource.schedule()
                 val d = env.data
                 if (env.status != "success" || d?.days == null) "Server tidak merespons dengan benar (${env.message ?: env.status ?: "data kosong"})"
                 else { days = d; null }

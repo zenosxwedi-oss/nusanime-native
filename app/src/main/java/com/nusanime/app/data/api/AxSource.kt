@@ -1,0 +1,136 @@
+package com.nusanime.app.data.api
+
+import com.nusanime.app.data.model.AnimeItem
+import com.nusanime.app.data.model.DetailData
+import com.nusanime.app.data.model.Envelope
+import com.nusanime.app.data.model.EpisodeData
+import com.nusanime.app.data.model.EpisodeItem
+import com.nusanime.app.data.model.HomeData
+import com.nusanime.app.data.model.ListData
+import com.nusanime.app.data.model.ScheduleData
+import com.nusanime.app.data.model.ServerData
+import com.nusanime.app.data.model.ServerResult
+
+/**
+ * Adapter: serves the same model types the UI already consumes (sankavollerei shapes),
+ * but backed by the animein.net API (same backend as AnimeX-App).
+ * UI code stays untouched.
+ */
+object AxSource {
+
+    private fun AxMovie.toItem(): AnimeItem = AnimeItem(
+        title = title,
+        poster = posterUrl,
+        animeId = id,
+        episodeId = episodeId,
+        episodes = episodeIndex,
+        releasedOn = year,
+        type = type,
+        score = rating,
+        statusField = status,
+        genreList = genre?.split(",")?.mapNotNull { g ->
+            val t = g.trim()
+            if (t.isEmpty()) null else com.nusanime.app.data.model.Genre(title = t, genreId = t)
+        },
+    )
+
+    private fun AxEpisode.toItem(): EpisodeItem = EpisodeItem(
+        title = title ?: ("Episode " + (index ?: "?")),
+        episodeId = id,
+        date = null,
+        releasedOn = null,
+    )
+
+    suspend fun home(): Envelope<HomeData> {
+        val h = AnimeInApi.home() ?: throw RuntimeException("Gagal memuat beranda")
+        fun rows(l: List<AxMovie>?) = HomeData.RecentData(animeList = l?.map { it.toItem() })
+        val data = HomeData(
+            recent = rows(h.update ?: h.new),
+            top10 = rows(h.popular ?: h.hot),
+            batch = rows(h.today),
+            movie = rows(h.random ?: h.waiting),
+        )
+        return Envelope(status = "success", data = data)
+    }
+
+    suspend fun ongoing(page: Int = 1): Envelope<ListData> {
+        // animein: explore by type SERIES sorted by update; page 0-based
+        val r = AnimeInApi.exploreBy("type", "6", page - 1)
+        return Envelope(status = "success", data = ListData(animeList = r.map { it.toItem() }))
+    }
+
+    suspend fun completed(page: Int = 1): Envelope<ListData> {
+        val r = AnimeInApi.exploreBy("type", "2", page - 1)
+        return Envelope(status = "success", data = ListData(animeList = r.map { it.toItem() }))
+    }
+
+    suspend fun schedule(): Envelope<ScheduleData> {
+        val days = listOf("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")
+        val out = mutableListOf<ScheduleData.ScheduleDay>()
+        days.forEach { d ->
+            val list = AnimeInApi.schedule(d.lowercase())
+            if (list.isNotEmpty()) out.add(ScheduleData.ScheduleDay(day = d, animeList = list.map { it.toItem() }))
+        }
+        return Envelope(status = "success", data = ScheduleData(days = out))
+    }
+
+    suspend fun search(q: String): Envelope<ListData> {
+        val r = AnimeInApi.search(q)
+        return Envelope(status = "success", data = ListData(animeList = r.map { it.toItem() }))
+    }
+
+    /** Episode metadata + server list flattened into "Server 1..N" per quality. */
+    suspend fun detail(animeId: String): Envelope<DetailData> {
+        val m = AnimeInApi.detail(animeId) ?: throw RuntimeException("Anime tidak ditemukan")
+        val eps = AnimeInApi.episodes(animeId)
+        val data = DetailData(
+            title = m.title,
+            poster = m.posterUrl,
+            synopsis = m.synopsis,
+            status = m.status,
+            type = m.type,
+            duration = null,
+            season = m.season ?: m.year,
+            studios = m.studio,
+            score = m.rating,
+            genreList = m.genre?.split(",")?.mapNotNull { g ->
+                val t = g.trim()
+                if (t.isEmpty()) null else com.nusanime.app.data.model.Genre(title = t, genreId = t)
+            },
+            episodeList = eps.map { it.toItem() },
+        )
+        return Envelope(status = "success", data = data)
+    }
+
+    suspend fun episode(episodeId: String): Envelope<EpisodeData> {
+        val servers = AnimeInApi.servers(episodeId)
+        // group by quality, keep order; build ServerData shape
+        val groups = LinkedHashMap<String, MutableList<ServerData.ServerItem>>()
+        servers.forEachIndexed { i, s ->
+            val q = s.quality?.takeIf { it.isNotBlank() } ?: "Default"
+            groups.getOrPut(q) { mutableListOf() }.add(
+                ServerData.ServerItem(title = "Server ${i + 1}", serverId = s.link),
+            )
+        }
+        val qualities = groups.map { (q, list) -> ServerData.QualityGroup(title = q, serverList = list) }
+        val first = servers.firstOrNull()?.link
+        val data = EpisodeData(
+            title = null,
+            animeId = null,
+            poster = null,
+            releasedOn = null,
+            defaultStreamingUrl = first,
+            hasPrevEpisode = null,
+            prevEpisode = null,
+            hasNextEpisode = null,
+            nextEpisode = null,
+            server = if (qualities.isEmpty()) null else ServerData(qualities = qualities),
+            downloadUrl = null,
+        )
+        return Envelope(status = "success", data = data)
+    }
+
+    /** serverId carries the direct link (see episode()). */
+    suspend fun server(serverId: String): Envelope<ServerResult> =
+        Envelope(status = "success", data = ServerResult(url = serverId))
+}

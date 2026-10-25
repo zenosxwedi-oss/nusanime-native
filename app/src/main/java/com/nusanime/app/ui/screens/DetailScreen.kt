@@ -76,7 +76,7 @@ class DetailViewModel(private val animeId: String) : ViewModel() {
     fun load() {
         viewModelScope.launch {
             error = try {
-                val env = ApiClient.api.detail(animeId)
+                val env = com.nusanime.app.data.api.AxSource.detail(animeId)
                 val d = env.data
                 if (env.status != "success" || d?.title == null) "Gagal memuat detail (${env.message ?: env.status ?: "data kosong"})"
                 else { detail = d; null }

@@ -65,9 +65,9 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     fun load() {
         viewModelScope.launch {
             error = try {
-                val env = ApiClient.api.episode(episodeId)
+                val env = com.nusanime.app.data.api.AxSource.episode(episodeId)
                 val d = env.data
-                if (env.status != "success" || d?.title == null) "Gagal memuat episode (${env.message ?: env.status ?: "data kosong"})"
+                if (env.status != "success" || d == null) "Gagal memuat episode (${env.message ?: env.status ?: "data kosong"})"
                 else {
                     data = d
                     playError = null
@@ -94,7 +94,7 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
         viewModelScope.launch {
             playError = null
             try {
-                val env = ApiClient.api.server(serverId)
+                val env = com.nusanime.app.data.api.AxSource.server(serverId)
                 val url = env.data?.url
                 if (env.status != "success" || url.isNullOrBlank()) playError = "Server tidak tersedia"
                 else tryPlay(url)

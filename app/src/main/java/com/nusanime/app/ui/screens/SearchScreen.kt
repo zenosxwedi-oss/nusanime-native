@@ -42,7 +42,7 @@ class SearchViewModel : ViewModel() {
         viewModelScope.launch {
             loading = true
             error = try {
-                val env = ApiClient.api.search(q.trim())
+                val env = com.nusanime.app.data.api.AxSource.search(q.trim())
                 val list = env.data?.animeList
                 if (env.status != "success" || list == null) "Server tidak merespons dengan benar (${env.message ?: env.status ?: "data kosong"})"
                 else { results = list; searched = true; null }

@@ -36,16 +36,16 @@ class ListViewModel(private val source: Source) : ViewModel() {
             if (initial) loading = true
             error = try {
                 val list: List<AnimeItem>? = if (source == Source.Home) {
-                    val env: com.nusanime.app.data.model.Envelope<com.nusanime.app.data.model.HomeData> = ApiClient.api.home()
+                    val env = com.nusanime.app.data.api.AxSource.home()
                     val h = env.data
-                    if (env.status != "success" || h == null) null else
+                    if (h == null) null else
                         (h.recent?.animeList ?: emptyList()) +
                             (h.top10?.animeList ?: emptyList()) +
                             (h.batch?.animeList ?: emptyList()) +
                             (h.movie?.animeList ?: emptyList())
                 } else {
                     val env: com.nusanime.app.data.model.Envelope<com.nusanime.app.data.model.ListData> =
-                        if (source == Source.Ongoing) ApiClient.api.ongoing(1) else ApiClient.api.completed(1)
+                        if (source == Source.Ongoing) com.nusanime.app.data.api.AxSource.ongoing(1) else com.nusanime.app.data.api.AxSource.completed(1)
                     if (env.status != "success") null else env.data?.animeList
                 }
                 if (list == null)
@@ -68,7 +68,7 @@ class ListViewModel(private val source: Source) : ViewModel() {
             try {
                 page += 1
                 val env: com.nusanime.app.data.model.Envelope<com.nusanime.app.data.model.ListData> =
-                    if (source == Source.Ongoing) ApiClient.api.ongoing(page) else ApiClient.api.completed(page)
+                    if (source == Source.Ongoing) com.nusanime.app.data.api.AxSource.ongoing(page) else com.nusanime.app.data.api.AxSource.completed(page)
                 val list = env.data?.animeList
                 if (env.status != "success" || list.isNullOrEmpty()) endReached = true
                 else items = items + list
