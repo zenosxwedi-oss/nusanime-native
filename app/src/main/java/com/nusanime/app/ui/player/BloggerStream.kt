@@ -12,7 +12,7 @@ import java.net.URL
  * resolved on a server.
  */
 object BloggerStream {
-    private const val BS = "\"
+    private const val BS = "\\"
 
     fun isBlogger(url: String): Boolean =
         url.contains("blogger.com/video.g") || url.contains("googleusercontent.com/videoplayback")
