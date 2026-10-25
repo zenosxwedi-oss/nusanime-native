@@ -74,11 +74,22 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     }
 
     private fun tryPlay(url: String) {
-        val direct = directPlayable(url)
-        if (direct != null) playingUrl = direct
-        else {
-            playingUrl = null
-            playError = "Video ini tidak bisa diputar langsung di aplikasi. Silakan gunakan tombol download."
+        if (BloggerStream.isBlogger(url)) {
+            viewModelScope.launch {
+                val direct = BloggerStream.extract(url)
+                if (direct != null) playingUrl = direct
+                else {
+                    playingUrl = null
+                    playError = "Gagal mengambil stream. Coba server lain."
+                }
+            }
+        } else {
+            val direct = directPlayable(url)
+            if (direct != null) playingUrl = direct
+            else {
+                playingUrl = null
+                playError = "Server ini tidak bisa diputar langsung. Silakan gunakan tombol download atau coba server lain."
+            }
         }
     }
 
@@ -118,15 +129,29 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
                     d.releasedOn?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     Spacer(Modifier.height(16.dp))
 
-                    val serverList = d.server?.qualities.orEmpty().flatMap { q -> q.serverList.orEmpty() }
+                    val serverList = d.server?.qualities.orEmpty()
+                        .flatMap { q -> q.serverList.orEmpty().map { it to q.title.orEmpty() } }
+                        .filter { (s, _) -> s.serverId != null }
                     if (serverList.isNotEmpty()) {
                         Text("Server Streaming", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            serverList.forEach { s ->
-                                OutlinedButton(onClick = { s.serverId?.let(vm::playServer) }) { Text(s.title ?: "Server") }
+                            serverList.forEachIndexed { i, (s, quality) ->
+                                val label = buildString {
+                                    append("Server ${i + 1}")
+                                    if (quality.isNotBlank() && quality != "unknown") append(" • $quality")
+                                }
+                                OutlinedButton(onClick = { s.serverId?.let(vm::playServer) }) { Text(label) }
                             }
                         }
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    val gofile = flattenDownloads(d.downloadUrl).filter { it.second.contains("gofile.io") }
+                    if (gofile.isNotEmpty()) {
+                        Text("Gofile (360p–1080p)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        gofile.forEach { (label, url) -> DownloadLinkRow(label, url) }
                         Spacer(Modifier.height(16.dp))
                     }
 
