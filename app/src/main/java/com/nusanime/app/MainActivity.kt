@@ -181,19 +181,6 @@ fun App(openEpisode: String? = null) {
                 }
             }
         },
-                                label = { Text(tab.label) },
-                                leadingIcon = { Icon(tab.icon, tab.label, Modifier.height(18.dp)) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                            )
-                        }
-                    }
-                }
-            }
-        },
     ) { pad ->
         NavHost(
             navController = nav,
