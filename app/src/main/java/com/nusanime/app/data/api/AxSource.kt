@@ -114,7 +114,15 @@ object AxSource {
     }
 
     suspend fun episode(episodeId: String): Envelope<EpisodeData> {
-        val servers = AnimeInApi.servers(episodeId)
+        // streamnew is flaky: retry a few times before giving up
+        var servers = AnimeInApi.servers(episodeId)
+        var tries = 0
+        while (servers.isEmpty() && tries < 3) {
+            tries++
+            kotlinx.coroutines.delay(800L * tries)
+            servers = AnimeInApi.servers(episodeId)
+        }
+
         // group by quality, keep order; build ServerData shape
         val groups = LinkedHashMap<String, MutableList<ServerData.ServerItem>>()
         servers.forEachIndexed { i, s ->

@@ -39,6 +39,8 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     var playingUrl by mutableStateOf<String?>(null)
     var prerollActive by mutableStateOf(false)
     var prerollFailed by mutableStateOf(false)
+    var adElapsed by mutableStateOf(0)
+    var adMuted by mutableStateOf(false)
     var playError by mutableStateOf<String?>(null)
     var resumePositionMs by mutableStateOf(0L)
     var autoNext by mutableStateOf(false)
@@ -84,7 +86,11 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
                             resumePositionMs = h.positionMs
                         }
                     } catch (_: Exception) {}
-                    d.defaultStreamingUrl?.let { tryPlay(it) }
+                    if (d.defaultStreamingUrl.isNullOrBlank()) {
+                        playError = "Server streaming tidak tersedia. Tap Coba Lagi."
+                    } else {
+                        d.defaultStreamingUrl?.let { tryPlay(it) }
+                    }
                     null
                 }
             } catch (e: Exception) {
@@ -245,6 +251,7 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
                     if (vm.prerollActive && reason == androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && !vm.prerollFailed) {
                         // ad finished naturally
                         vm.prerollActive = false
+                        player?.volume = 1f
                     }
                 }
                 override fun onPlaybackStateChanged(state: Int) {
@@ -263,6 +270,8 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
                     p.setMediaItems(listOf(ad, content))
                     vm.prerollActive = true
                     vm.prerollFailed = false
+                    vm.adElapsed = 0
+                    player?.volume = 0f
                     retryCount = 0
                 } else {
                     p.setMediaItem(content)
@@ -365,11 +374,43 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
     }
 
     Box(playerModifier.background(androidx.compose.ui.graphics.Color.Black)) {
+        // Pre-roll ad overlay (web-style): countdown chip + Suara toggle + skip
+        if (vm.prerollActive) {
+            LaunchedEffect(vm.prerollActive) {
+                while (vm.prerollActive) {
+                    kotlinx.coroutines.delay(1000)
+                    vm.adElapsed++
+                }
+            }
+            val remaining = (15 - vm.adElapsed).coerceAtLeast(0)
+            Text(
+                "Iklan · Lewati dalam ${remaining}s",
+                color = androidx.compose.ui.graphics.Color.White,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 10.dp)
+                    .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f), MaterialTheme.shapes.small)
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+            )
+            FilledTonalButton(
+                onClick = {
+                    vm.adMuted = !vm.adMuted
+                    player?.volume = if (vm.adMuted) 1f else 0f
+                },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp),
+                colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                    containerColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                    contentColor = androidx.compose.ui.graphics.Color.White,
+                ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            ) { Text(if (vm.adMuted) "🔊 Suara" else "🔇 Bisu", style = MaterialTheme.typography.labelMedium) }
+        }
         // Pre-roll ad skip button (visible during ad playback)
         if (vm.prerollActive) {
             val pl = player
             androidx.compose.material3.FilledTonalButton(
-                onClick = { vm.prerollActive = false; vm.prerollFailed = false; pl?.seekToNextMediaItem(); pl?.play() },
+                onClick = { vm.prerollActive = false; vm.prerollFailed = false; player?.volume = 1f; pl?.seekToNextMediaItem(); pl?.play() },
                 modifier = Modifier.align(Alignment.TopStart).padding(top = 64.dp, start = 10.dp),
                 colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
                     containerColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
@@ -424,6 +465,12 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
                     Spacer(Modifier.height(12.dp))
                     Text("Coba server lain di bawah.", color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                 }
+                Spacer(Modifier.height(14.dp))
+                Button(onClick = {
+                    vm.playError = null
+                    vm.loading = true
+                    vm.load()
+                }) { Text("🔄 Coba Lagi") }
             }
         } else {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
