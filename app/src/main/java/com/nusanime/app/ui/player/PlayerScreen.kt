@@ -148,7 +148,7 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
     if (vm.fullscreen) {
         // True fullscreen: only the video, edge to edge, with a back button
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black)) {
-            PlayerArea(vm)
+            PlayerArea(vm, fillScreen = true)
             IconButton(
                 onClick = onBack,
                 modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
@@ -208,7 +208,7 @@ fun PlayerScreen(episodeId: String, onBack: () -> Unit, onOpenEpisode: (String) 
 }
 
 @Composable
-private fun PlayerArea(vm: PlayerViewModel) {
+private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
 
@@ -301,11 +301,13 @@ private fun PlayerArea(vm: PlayerViewModel) {
 
     BackHandler(enabled = vm.fullscreen) { exitFullscreen() }
 
-    val playerModifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+    // In fullscreen: fill the entire screen (FIT/FILL) so subtitle at the bottom edge stays visible.
+    // In normal (portrait inline) mode: keep 16:9 letterbox.
+    val playerModifier = if (fillScreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f)
     Box(playerModifier.background(androidx.compose.ui.graphics.Color.Black)) {
-        // Quality/server switcher inside the video
+        // Quality/server switcher inside the video — top-left so it never collides with the bottom subtitle area
         val serversAll = vm.data?.server?.qualities.orEmpty()
-        if (serversAll.isNotEmpty()) {
+        if (serversAll.isNotEmpty() && !fillScreen) {
             androidx.compose.foundation.lazy.LazyRow(
                 modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
@@ -332,6 +334,7 @@ private fun PlayerArea(vm: PlayerViewModel) {
                 factory = {
                     PlayerView(it).apply {
                         useController = true
+                        resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
                         setFullscreenButtonClickListener { isFs ->
                             if (isFs) enterFullscreen() else exitFullscreen()
                         }
