@@ -304,6 +304,21 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
     // In fullscreen: fill the entire screen (FIT/FILL) so subtitle at the bottom edge stays visible.
     // In normal (portrait inline) mode: keep 16:9 letterbox.
     val playerModifier = if (fillScreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+
+    // Keep screen ON while video plays (no sleep/dim during playback)
+    val currentUrl = vm.playingUrl
+    val isPlaying = player != null && currentUrl != null
+    DisposableEffect(isPlaying) {
+        val activityCtx = context as? android.app.Activity
+        val window = activityCtx?.window
+        var added = false
+        if (isPlaying && window != null) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            added = true
+        }
+        onDispose { if (added) window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+    }
+
     Box(playerModifier.background(androidx.compose.ui.graphics.Color.Black)) {
         // Quality/server switcher inside the video — top-left so it never collides with the bottom subtitle area
         val serversAll = vm.data?.server?.qualities.orEmpty()
