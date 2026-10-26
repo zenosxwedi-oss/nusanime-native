@@ -124,6 +124,25 @@ object AxSource {
         }
 
         // group by quality, keep order; build ServerData shape
+        // FALLBACK (like v3.4.x era): sankavollerei direct episode data when animein has no streams
+        if (servers.isEmpty()) {
+            try {
+                val fb = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val conn = java.net.URL("https://www.sankavollerei.web.id/anime/samehadaku/episode/" + episodeId).openConnection() as java.net.HttpURLConnection
+                    conn.connectTimeout = 12000
+                    conn.readTimeout = 15000
+                    conn.setRequestProperty("User-Agent", "okhttp/4.12.0")
+                    conn.setRequestProperty("Accept", "application/json")
+                    if (conn.responseCode !in 200..299) throw RuntimeException("HTTP " + conn.responseCode)
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    com.google.gson.Gson().fromJson(body, EpisodeData::class.java)
+                }
+                if (fb != null && (!fb.defaultStreamingUrl.isNullOrBlank() || !fb.server?.qualities.isNullOrEmpty())) {
+                    return Envelope(status = "success", data = fb)
+                }
+            } catch (_: Exception) {}
+        }
+
         val groups = LinkedHashMap<String, MutableList<ServerData.ServerItem>>()
         servers.forEachIndexed { i, s ->
             val q = s.quality?.takeIf { it.isNotBlank() } ?: "Default"
