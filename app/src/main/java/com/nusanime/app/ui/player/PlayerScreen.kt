@@ -265,10 +265,11 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
         }
     }
     DisposableEffect(Unit) {
+        val act = context as? android.app.Activity
         onDispose {
             player?.release()
             // Leaving player screen entirely: always restore portrait
-            try { activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT } catch (_: Exception) {}
+            try { act?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT } catch (_: Exception) {}
         }
     }
 
