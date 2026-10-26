@@ -17,8 +17,8 @@ object InterstitialAd {
     private const val PREFS = "interstitial_ad"
     private const val KEY_COUNT = "open_count"
     private const val KEY_LAST = "last_shown"
-    private const val EVERY_N_OPENS = 3
-    private const val AD_COOLDOWN_MS = 10L * 60 * 1000
+    private const val EVERY_N_OPENS = 2
+    private const val AD_COOLDOWN_MS = 5L * 60 * 1000
     private const val AD_URL = "https://nusanime.web.id/interstitial-ad"
 
     fun maybeShow(activity: Activity, onClosed: (() -> Unit)? = null) {
