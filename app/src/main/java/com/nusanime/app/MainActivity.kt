@@ -69,6 +69,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         com.nusanime.app.notify.EpisodeNotifier.ensureChannel(this)
         com.nusanime.app.notify.EpisodeNotifier.schedule(this)
+        // Monetag interstitial (mobile fullscreen) — max once per 3 opens, 10-min cooldown
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            com.nusanime.app.update.InterstitialAd.maybeShow(this)
+        }, 4000)
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
         }
