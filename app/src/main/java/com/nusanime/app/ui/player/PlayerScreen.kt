@@ -264,7 +264,13 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
             }
         }
     }
-    DisposableEffect(Unit) { onDispose { player?.release() } }
+    DisposableEffect(Unit) {
+        onDispose {
+            player?.release()
+            // Leaving player screen entirely: always restore portrait
+            try { activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT } catch (_: Exception) {}
+        }
+    }
 
     // Fullscreen mode: hide status bars, landscape, player fills screen
     val activity = context as? android.app.Activity
@@ -290,7 +296,8 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
     fun exitFullscreen() {
         try {
             vm.fullscreen = false
-            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            // Force back to portrait so the app doesn't stay sideways ("miring") after exiting fullscreen
+            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             activity?.window?.let { w ->
                 val c = androidx.core.view.WindowInsetsControllerCompat(w, w.decorView)
                 c.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
