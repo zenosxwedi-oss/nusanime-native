@@ -228,6 +228,15 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
                         vm.prerollFailed = true
                         return
                     }
+                    // one automatic retry for transient network errors (e.g. IO_NETWORK_CONNECTION_FAILED)
+                    if (!retriedOnError) {
+                        retriedOnError = true
+                        val pl = player
+                        if (pl != null) {
+                            pl.prepare(); pl.play()
+                            return
+                        }
+                    }
                     vm.playError = "Gagal memutar: " + (error.errorCodeName ?: error.message ?: "unknown")
                     vm.playingUrl = null
                 }
@@ -253,6 +262,7 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
                     p.setMediaItems(listOf(ad, content))
                     vm.prerollActive = true
                     vm.prerollFailed = false
+                    retriedOnError = false
                 } else {
                     p.setMediaItem(content)
                 }
@@ -359,7 +369,7 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
             val pl = player
             androidx.compose.material3.FilledTonalButton(
                 onClick = { vm.prerollActive = false; vm.prerollFailed = false; pl?.seekToNextMediaItem(); pl?.play() },
-                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+                modifier = Modifier.align(Alignment.TopStart).padding(top = 64.dp, start = 10.dp),
                 colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
                     containerColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
                     contentColor = androidx.compose.ui.graphics.Color.White,
