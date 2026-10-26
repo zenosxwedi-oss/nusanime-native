@@ -37,6 +37,7 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     var loading by mutableStateOf(true)
     var error by mutableStateOf<String?>(null)
     var playingUrl by mutableStateOf<String?>(null)
+    var prerollActive by mutableStateOf(false)
     var playError by mutableStateOf<String?>(null)
     var resumePositionMs by mutableStateOf(0L)
     var autoNext by mutableStateOf(false)
@@ -223,17 +224,31 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
                     vm.playError = "Gagal memutar: " + (error.errorCodeName ?: error.message ?: "unknown")
                     vm.playingUrl = null
                 }
+                override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                    if (reason == androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) vm.prerollActive = false
+                }
                 override fun onPlaybackStateChanged(state: Int) {
                     if (state == androidx.media3.common.Player.STATE_ENDED) {
+                        vm.prerollActive = false
                         vm.saveProgress(context, 0, 0)
                         if (vm.autoNext) vm.onEnded?.invoke()
                     }
                 }
             })
-            p.setMediaItem(MediaItem.fromUri(url))
-            if (vm.resumePositionMs > 0) p.seekTo(vm.resumePositionMs)
-            p.prepare()
-            p.playWhenReady = true
+            // Pre-roll ad (horizontal/vertical zones, random): playlist = [ad, content]
+            com.nusanime.app.ui.player.VastAd.fetch { adMedia ->
+                val content = MediaItem.fromUri(url)
+                if (adMedia != null) {
+                    val ad = MediaItem.fromUri(adMedia)
+                    p.setMediaItems(listOf(ad, content))
+                    vm.prerollActive = true
+                } else {
+                    p.setMediaItem(content)
+                }
+                if (vm.resumePositionMs > 0) p.seekTo(vm.resumePositionMs)
+                p.prepare()
+                p.playWhenReady = true
+            }
             player = p
         }
     }
@@ -243,7 +258,7 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
         while (true) {
             kotlinx.coroutines.delay(10_000)
             val pl = player ?: break
-            if (pl.isPlaying) vm.saveProgress(context, pl.currentPosition, pl.duration.coerceAtLeast(0))
+            if (pl.isPlaying && !vm.prerollActive) vm.saveProgress(context, pl.currentPosition, pl.duration.coerceAtLeast(0))
         }
     }
 
@@ -328,6 +343,19 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
     }
 
     Box(playerModifier.background(androidx.compose.ui.graphics.Color.Black)) {
+        // Pre-roll ad skip button (visible during ad playback)
+        if (vm.prerollActive) {
+            val pl = player
+            androidx.compose.material3.FilledTonalButton(
+                onClick = { pl?.seekToNextMediaItem() },
+                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+                colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                    containerColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                    contentColor = androidx.compose.ui.graphics.Color.White,
+                ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+            ) { Text("Lewati Iklan ⏭", style = MaterialTheme.typography.labelMedium) }
+        }
         // Quality/server switcher inside the video — top-left so it never collides with the bottom subtitle area
         val serversAll = vm.data?.server?.qualities.orEmpty()
         if (serversAll.isNotEmpty() && !fillScreen) {
