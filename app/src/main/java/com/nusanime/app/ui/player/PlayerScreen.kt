@@ -38,6 +38,7 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     var error by mutableStateOf<String?>(null)
     var playingUrl by mutableStateOf<String?>(null)
     var prerollActive by mutableStateOf(false)
+    var prerollFailed by mutableStateOf(false)
     var playError by mutableStateOf<String?>(null)
     var resumePositionMs by mutableStateOf(0L)
     var autoNext by mutableStateOf(false)
@@ -221,11 +222,20 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
             val p = ExoPlayer.Builder(context).build()
             p.addListener(object : androidx.media3.common.Player.Listener {
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    if (vm.prerollActive) {
+                        // ad failed to load: pause on black screen until user taps skip (do NOT auto-advance to content)
+                        player?.pause()
+                        vm.prerollFailed = true
+                        return
+                    }
                     vm.playError = "Gagal memutar: " + (error.errorCodeName ?: error.message ?: "unknown")
                     vm.playingUrl = null
                 }
                 override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
-                    if (reason == androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) vm.prerollActive = false
+                    if (vm.prerollActive && reason == androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && !vm.prerollFailed) {
+                        // ad finished naturally
+                        vm.prerollActive = false
+                    }
                 }
                 override fun onPlaybackStateChanged(state: Int) {
                     if (state == androidx.media3.common.Player.STATE_ENDED) {
@@ -242,6 +252,7 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
                     val ad = MediaItem.fromUri(adMedia)
                     p.setMediaItems(listOf(ad, content))
                     vm.prerollActive = true
+                    vm.prerollFailed = false
                 } else {
                     p.setMediaItem(content)
                 }
@@ -347,7 +358,7 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
         if (vm.prerollActive) {
             val pl = player
             androidx.compose.material3.FilledTonalButton(
-                onClick = { pl?.seekToNextMediaItem() },
+                onClick = { vm.prerollActive = false; vm.prerollFailed = false; pl?.seekToNextMediaItem(); pl?.play() },
                 modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
                 colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
                     containerColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
