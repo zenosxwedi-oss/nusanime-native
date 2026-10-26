@@ -220,7 +220,7 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
         player = null
         if (url != null) {
             val p = ExoPlayer.Builder(context).build()
-            var retriedOnError = false
+            var retryCount = 0
             p.addListener(object : androidx.media3.common.Player.Listener {
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     if (vm.prerollActive) {
@@ -229,9 +229,9 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
                         vm.prerollFailed = true
                         return
                     }
-                    // one automatic retry for transient network errors (e.g. IO_NETWORK_CONNECTION_FAILED)
-                    if (!retriedOnError) {
-                        retriedOnError = true
+                    // automatic retries for transient network errors (e.g. IO_NETWORK_CONNECTION_FAILED)
+                    if (retryCount < 3) {
+                        retryCount++
                         val pl = player
                         if (pl != null) {
                             pl.prepare(); pl.play()
@@ -263,7 +263,7 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
                     p.setMediaItems(listOf(ad, content))
                     vm.prerollActive = true
                     vm.prerollFailed = false
-                    retriedOnError = false
+                    retryCount = 0
                 } else {
                     p.setMediaItem(content)
                 }
