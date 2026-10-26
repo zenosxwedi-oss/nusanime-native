@@ -262,25 +262,27 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
                     }
                 }
             })
-            // Pre-roll ad (horizontal/vertical zones, random): playlist = [ad, content]
-            com.nusanime.app.ui.player.VastAd.fetch { adMedia ->
-                val content = MediaItem.fromUri(url)
-                if (adMedia != null) {
+            // Content plays FIRST (never blocked by ad network fetch — fixes dead player).
+            val content = MediaItem.fromUri(url)
+            p.setMediaItem(content)
+            if (vm.resumePositionMs > 0) p.seekTo(vm.resumePositionMs)
+            p.prepare()
+            p.playWhenReady = true
+            player = p
+            // Pre-roll ad: only if VAST resolves within 2s; otherwise skip ad this time
+            val adReady = java.util.concurrent.CompletableFuture<String?>()
+            com.nusanime.app.ui.player.VastAd.fetch { adMedia -> adReady.complete(adMedia) }
+            try {
+                val adMedia = adReady.get(2, java.util.concurrent.TimeUnit.SECONDS)
+                if (adMedia != null && player === p) {
                     val ad = MediaItem.fromUri(adMedia)
-                    p.setMediaItems(listOf(ad, content))
+                    p.setMediaItems(listOf(ad, content), true)
                     vm.prerollActive = true
                     vm.prerollFailed = false
                     vm.adElapsed = 0
-                    player?.volume = 0f
-                    retryCount = 0
-                } else {
-                    p.setMediaItem(content)
+                    p.volume = 0f
                 }
-                if (vm.resumePositionMs > 0) p.seekTo(vm.resumePositionMs)
-                p.prepare()
-                p.playWhenReady = true
-            }
-            player = p
+            } catch (_: Exception) { /* ad too slow — just play content */ }
         }
     }
 
