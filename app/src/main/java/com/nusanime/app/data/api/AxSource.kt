@@ -171,4 +171,60 @@ object AxSource {
     /** serverId carries the direct link (see episode()). */
     suspend fun server(serverId: String): Envelope<ServerResult> =
         Envelope(status = "success", data = ServerResult(url = serverId))
+
+    private suspend fun rawJson(path: String): String? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val conn = java.net.URL("https://www.sankavollerei.web.id/anime/samehadaku/" + path).openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 12000
+                conn.readTimeout = 15000
+                conn.setRequestProperty("User-Agent", "okhttp/4.12.0")
+                conn.setRequestProperty("Accept", "application/json")
+                if (conn.responseCode !in 200..299) return@withContext null
+                conn.inputStream.bufferedReader().use { it.readText() }
+            } catch (_: Exception) { null }
+        }
+
+    /** Genre list from sankavollerei: [{title, genreId}] */
+    suspend fun genreList(): List<com.nusanime.app.data.model.Genre> {
+        val body = rawJson("genres") ?: return emptyList()
+        return try {
+            val parsed = com.google.gson.JsonParser.parseString(body).asJsonObject
+                .getAsJsonObject("data").getAsJsonArray("genreList")
+            parsed.mapNotNull { el ->
+                val o = el.asJsonObject
+                val id = o.get("genreId")?.asString ?: return@mapNotNull null
+                com.nusanime.app.data.model.Genre(title = o.get("title")?.asString ?: id, genreId = id)
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    /** Anime list for a genre from sankavollerei. */
+    suspend fun genreAnime(genreId: String): Envelope<ListData> {
+        val body = rawJson("genres/" + genreId)
+        val list = if (body != null) {
+            try {
+                val parsed = com.google.gson.JsonParser.parseString(body).asJsonObject
+                    .getAsJsonObject("data").getAsJsonArray("animeList")
+                parsed.mapNotNull { el ->
+                    val o = el.asJsonObject
+                    fun s(k: String) = o.get(k)?.takeIf { !it.isJsonNull }?.asString
+                    AnimeItem(
+                        title = s("title"),
+                        poster = s("poster"),
+                        animeId = s("animeId") ?: s("href")?.substringAfterLast('/')?.removeSuffix("/"),
+                        episodeId = s("episodeId") ?: s("href")?.substringAfterLast('/')?.removeSuffix("/"),
+                        episodes = s("episode") ?: s("episodes"),
+                        releasedOn = s("releasedOn") ?: s("release"),
+                        type = s("type"),
+                        score = s("rating") ?: s("score"),
+                        statusField = s("status"),
+                        estimation = null,
+                        genreList = null,
+                    )
+                }
+            } catch (_: Exception) { emptyList() }
+        } else emptyList()
+        return Envelope(status = if (list.isEmpty()) "empty" else "success", data = ListData(animeList = list))
+    }
 }

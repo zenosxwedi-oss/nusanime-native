@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.TaskAlt
@@ -48,6 +49,7 @@ object Routes {
     const val ONGOING = "ongoing"
     const val COMPLETED = "completed"
     const val SCHEDULE = "schedule"
+    const val GENRE = "genre"
     const val SEARCH = "search"
     const val BOOKMARKS = "bookmarks"
     const val HISTORY = "history"
@@ -133,6 +135,7 @@ fun App(openEpisode: String? = null) {
         BottomItem(Routes.ONGOING, "Ongoing", Icons.Default.Subscriptions),
         BottomItem(Routes.COMPLETED, "Tamatan", Icons.Default.TaskAlt),
         BottomItem(Routes.SCHEDULE, "Jadwal", Icons.Default.CalendarMonth),
+        BottomItem(Routes.GENRE, "Genre", Icons.Default.Category),
         BottomItem(Routes.SEARCH, "Cari", Icons.Default.Search),
         BottomItem(Routes.BOOKMARKS, "Simpan", Icons.Default.Bookmarks),
         BottomItem(Routes.HISTORY, "Riwayat", Icons.Default.History),
@@ -152,6 +155,7 @@ fun App(openEpisode: String? = null) {
                     val bottomTabs = listOf(
                         BottomItem(Routes.HOME, "HOME", Icons.Default.Home),
                         BottomItem(Routes.SCHEDULE, "JADWAL", Icons.Default.CalendarMonth),
+                        BottomItem(Routes.GENRE, "GENRE", Icons.Default.Category),
                         BottomItem(Routes.SEARCH, "CARI", Icons.Default.Search),
                         BottomItem(Routes.BOOKMARKS, "SIMPAN", Icons.Default.Bookmarks),
                         BottomItem(Routes.SETTINGS, "PROFILE", Icons.Default.Settings),
@@ -191,6 +195,7 @@ fun App(openEpisode: String? = null) {
             composable(Routes.ONGOING) { ListScreen(Source.Ongoing, { nav.navigate(Routes.detail(it)) }) { nav.navigate(Routes.player(it)) } }
             composable(Routes.COMPLETED) { ListScreen(Source.Completed, { nav.navigate(Routes.detail(it)) }) }
             composable(Routes.SCHEDULE) { ScheduleScreen { nav.navigate(Routes.detail(it)) } }
+            composable(Routes.GENRE) { com.nusanime.app.ui.screens.GenreScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.SEARCH) { SearchScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.BOOKMARKS) { BookmarksScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.HISTORY) { HistoryScreen { nav.navigate(Routes.player(it)) } }
