@@ -92,8 +92,11 @@ object AxSource {
 
     /** Episode metadata + server list flattened into "Server 1..N" per quality. */
     suspend fun detail(animeId: String): Envelope<DetailData> {
-        val m = AnimeInApi.detail(animeId) ?: throw RuntimeException("Anime tidak ditemukan")
-        val eps = AnimeInApi.episodes(animeId)
+        // Fallback: samehadaku detail (slug ids from genre list / search may not exist on animein)
+        try {
+            val m = AnimeInApi.detail(animeId)
+            if (m == null) throw RuntimeException("not on animein")
+            val eps = AnimeInApi.episodes(animeId)
         val data = DetailData(
             title = m.title,
             poster = m.posterUrl,
@@ -111,6 +114,13 @@ object AxSource {
             episodeList = eps.map { it.toItem() },
         )
         return Envelope(status = "success", data = data)
+        } catch (_: Exception) {}
+
+        // samehadaku direct detail
+        val body = rawJson("anime/" + animeId) ?: throw RuntimeException("Anime tidak ditemukan")
+        val fb = com.google.gson.Gson().fromJson(body, DetailData::class.java)
+            ?: throw RuntimeException("Anime tidak ditemukan")
+        return Envelope(status = "success", data = fb)
     }
 
     suspend fun episode(episodeId: String): Envelope<EpisodeData> {
