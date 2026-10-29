@@ -1,22 +1,31 @@
 package com.nusanime.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import coil.compose.AsyncImage
 import com.nusanime.app.data.api.ApiClient
+import com.nusanime.app.data.api.AxSource
+import com.nusanime.app.data.api.HdPoster
 import com.nusanime.app.data.model.ScheduleData
 import com.nusanime.app.ui.ErrorScreen
 import com.nusanime.app.ui.LoadingScreen
@@ -33,7 +42,7 @@ class ScheduleViewModel : ViewModel() {
     fun load() {
         viewModelScope.launch {
             error = try {
-                val env = com.nusanime.app.data.api.AxSource.schedule()
+                val env = AxSource.schedule()
                 val d = env.data
                 if (env.status != "success" || d?.days == null) "Server tidak merespons dengan benar (${env.message ?: env.status ?: "data kosong"})"
                 else { days = d; null }
@@ -44,6 +53,28 @@ class ScheduleViewModel : ViewModel() {
             refreshing = false
         }
     }
+}
+
+/** Row poster: API poster first, upgraded to HD (AniList) once resolved. */
+@Composable
+private fun SchedulePoster(title: String?, fallback: String?, modifier: Modifier) {
+    var hd by remember(title) { mutableStateOf<String?>(null) }
+    LaunchedEffect(title) {
+        if (!title.isNullOrBlank()) {
+            HdPoster.cached(title)?.let { hd = it }
+            if (hd == null) hd = HdPoster.fetch(title)
+        }
+    }
+    AsyncImage(
+        model = hd ?: fallback,
+        contentDescription = title,
+        contentScale = ContentScale.Crop,
+        modifier = modifier
+            .width(56.dp)
+            .aspectRatio(2f / 3f)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF1B1B22)),
+    )
 }
 
 @Composable
@@ -77,8 +108,14 @@ fun ScheduleScreen(onOpenDetail: (String) -> Unit) {
                                     .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
+                                SchedulePoster(
+                                    title = anime.title,
+                                    fallback = anime.poster,
+                                    modifier = Modifier,
+                                )
+                                Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text(anime.title ?: "-", style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(anime.title ?: "-", style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                     anime.estimation?.let { Text("Est. $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 }
                                 Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
