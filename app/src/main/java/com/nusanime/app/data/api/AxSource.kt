@@ -116,10 +116,14 @@ object AxSource {
         return Envelope(status = "success", data = data)
         } catch (_: Exception) {}
 
-        // samehadaku direct detail
+        // samehadaku direct detail (body is an ENVELOPE {status, data:{...}} — parse .data, not the envelope)
         val body = rawJson("anime/" + animeId) ?: throw RuntimeException("Anime tidak ditemukan")
-        val fb = com.google.gson.Gson().fromJson(body, DetailData::class.java)
+        val obj = try { com.google.gson.JsonParser.parseString(body).asJsonObject } catch (_: Exception) { null }
             ?: throw RuntimeException("Anime tidak ditemukan")
+        val dataEl = obj.getAsJsonObject("data") ?: obj
+        val fb = com.google.gson.Gson().fromJson(dataEl, DetailData::class.java)
+            ?: throw RuntimeException("Anime tidak ditemukan")
+        if (fb.title == null) throw RuntimeException("Anime tidak ditemukan")
         return Envelope(status = "success", data = fb)
     }
 
@@ -145,7 +149,9 @@ object AxSource {
                     conn.setRequestProperty("Accept", "application/json")
                     if (conn.responseCode !in 200..299) throw RuntimeException("HTTP " + conn.responseCode)
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    com.google.gson.Gson().fromJson(body, EpisodeData::class.java)
+                    val obj = try { com.google.gson.JsonParser.parseString(body).asJsonObject } catch (_: Exception) { null }
+                    val dataEl = obj?.getAsJsonObject("data") ?: obj
+                    com.google.gson.Gson().fromJson(dataEl, EpisodeData::class.java)
                 }
                 if (fb != null && (!fb.defaultStreamingUrl.isNullOrBlank() || !fb.server?.qualities.isNullOrEmpty())) {
                     return Envelope(status = "success", data = fb)
