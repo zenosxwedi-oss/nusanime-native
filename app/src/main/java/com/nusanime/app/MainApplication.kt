@@ -52,7 +52,7 @@ object AdMobAds {
 
     /** Show if available; onEarned fires when reward earned. Returns false when no ad ready. */
     fun show(activity: android.app.Activity, onEarned: () -> Unit = {}): Boolean {
-        val ad = cached ?: return false
+        val ad = cached ?: run { preload(activity); return false }
         cached = null
         ad.show(activity) { onEarned() }
         return true
