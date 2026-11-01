@@ -2,8 +2,12 @@ package com.nusanime.app
 
 import android.app.Application
 import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd
+import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd
+import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoadCallback
 
 /**
  * AdMob integration (rewarded interstitial).
@@ -29,12 +33,17 @@ object AdMobAds {
                 object : RewardedInterstitialAdLoadCallback() {
                     override fun onAdLoaded(ad: RewardedInterstitialAd) {
                         cached = ad; loading = false
-                        ad.fullScreenContentCallback = object : com.google.android.gms.ads.FullScreenContentCallback() {
-                            override fun onAdDismissedFullScreenContent() { cached = null; preload(context) }
-                            override fun onAdFailedToShowFullScreenContent() { cached = null }
+                        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                            override fun onAdDismissedFullScreenContent() {
+                                cached = null
+                                preload(context)
+                            }
+                            override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                                cached = null
+                            }
                         }
                     }
-                    override fun onAdFailedToLoad(err: com.google.android.gms.ads.LoadAdError) {
+                    override fun onAdFailedToLoad(err: LoadAdError) {
                         loading = false; cached = null
                     }
                 })

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmarks
@@ -29,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -147,6 +149,30 @@ fun App(openEpisode: String? = null) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
+            val up by com.nusanime.app.update.UpdateState.st
+            if (up.active || up.ready != null) {
+                Surface(color = Color(0xFF8E24AA), modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            if (up.active) {
+                                if (up.progress > 0f) "⬇️ Update ${(up.progress * 100).toInt()}% (sambil nonton jalan terus)" else "⬇️ Mengunduh update…"
+                            } else "✅ Update siap — tap untuk install",
+                            color = Color.White, fontSize = 12.sp,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (up.ready != null) {
+                            TextButton(onClick = { com.nusanime.app.update.UpdateState.install(this@MainActivity) }) {
+                                Text("INSTALL", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        },
         bottomBar = {
             if (showBars) {
                 NavigationBar(

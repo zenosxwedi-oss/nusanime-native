@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nusanime.app.update.SelfUpdater
+import com.nusanime.app.update.UpdateState
 import kotlinx.coroutines.launch
 
 @Composable
@@ -18,10 +19,8 @@ fun SettingsScreen() {
     val current = remember { SelfUpdater.currentVersionName(ctx) }
     var status by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
-    var downloading by remember { mutableStateOf(false) }
-    var progressNote by remember { mutableStateOf<String?>(null) }
-    var dlProgress by remember { mutableStateOf(0f) }
     var remote by remember { mutableStateOf<SelfUpdater.ReleaseInfo?>(null) }
+    val upState by UpdateState.st
 
     Column(
         Modifier.fillMaxSize().padding(20.dp),
@@ -30,7 +29,6 @@ fun SettingsScreen() {
         Text("Pengaturan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Text("Versi aplikasi: $current", color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-        // Theme mode selector
         val ctxTheme = LocalContext.current
         var themeMode by remember { mutableStateOf(com.nusanime.app.ui.theme.ThemePrefs.mode(ctxTheme)) }
         Text("Tema", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -43,7 +41,7 @@ fun SettingsScreen() {
         Spacer(Modifier.height(8.dp))
 
         Button(
-            enabled = !checking && !downloading,
+            enabled = !checking && !upState.active,
             onClick = {
                 scope.launch {
                     checking = true
@@ -65,40 +63,24 @@ fun SettingsScreen() {
 
         remote?.let { info ->
             Button(
-                enabled = !downloading,
-                onClick = {
-                    scope.launch {
-                        downloading = true
-                        dlProgress = 0f
-                        progressNote = "Mengunduh v${info.versionName}…"
-                        val f = SelfUpdater.downloadApk(ctx, info.apkUrl) { done, total ->
-                            if (total > 0) dlProgress = (done.toFloat() / total).coerceIn(0f, 1f)
-                        }
-                        downloading = false
-                        progressNote = null
-                        if (f != null) {
-                            status = "Unduhan selesai — membuka installer…"
-                            SelfUpdater.install(ctx, f)
-                        } else {
-                            status = "Gagal mengunduh APK. Coba lagi atau cek koneksi."
-                        }
-                    }
-                },
-            ) { Text(if (downloading) "Mengunduh…" else "Unduh & Install v${info.versionName}") }
+                enabled = !upState.active,
+                onClick = { UpdateState.start(ctx, info) },
+            ) { Text(if (upState.active) "Mengunduh…" else "Unduh v${info.versionName} (bisa sambil nonton)") }
         }
 
-        if (downloading) {
-            LinearProgressIndicator(
-                progress = { dlProgress },
-                modifier = Modifier.fillMaxWidth(),
-            )
+        if (upState.ready != null) {
+            Button(onClick = { UpdateState.install(ctx) }) { Text("Install update sekarang") }
+        }
+
+        if (upState.active) {
+            LinearProgressIndicator(progress = { upState.progress }, modifier = Modifier.fillMaxWidth())
             Text(
-                if (dlProgress > 0f) "${(dlProgress * 100).toInt()}%" else "Menyiapkan unduhan…",
+                if (upState.progress > 0f) "${(upState.progress * 100).toInt()}% — boleh keluar dari halaman ini, unduhan tetap jalan" else "Menyiapkan unduhan…",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        progressNote?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+        upState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         status?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
         Spacer(Modifier.height(8.dp))
