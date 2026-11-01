@@ -165,7 +165,8 @@ fun App(openEpisode: String? = null) {
                             modifier = Modifier.weight(1f),
                         )
                         if (up.ready != null) {
-                            TextButton(onClick = { (androidx.compose.ui.platform.LocalContext.current as? android.app.Activity)?.let { com.nusanime.app.update.UpdateState.install(it) } }) {
+                            val bannerCtx = androidx.compose.ui.platform.LocalContext.current
+                            TextButton(onClick = { (bannerCtx as? android.app.Activity)?.let { com.nusanime.app.update.UpdateState.install(it) } }) {
                                 Text("INSTALL", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
