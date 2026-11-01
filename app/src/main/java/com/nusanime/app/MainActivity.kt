@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.nusanime.app.AdMobAds.preload(this)
         enableEdgeToEdge()
         com.nusanime.app.notify.EpisodeNotifier.ensureChannel(this)
         com.nusanime.app.notify.EpisodeNotifier.schedule(this)

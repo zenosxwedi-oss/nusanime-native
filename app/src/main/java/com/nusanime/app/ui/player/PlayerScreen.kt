@@ -312,12 +312,25 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
             }
         }
     }
+    var watchElapsed by remember { mutableIntStateOf(0) }
     DisposableEffect(Unit) {
         val act = context as? android.app.Activity
+        val ticker = kotlinx.coroutines.MainScope().launch {
+            while (true) { kotlinx.coroutines.delay(1000); watchElapsed++ }
+        }
         onDispose {
+            ticker.cancel()
             player?.release()
             // Leaving player screen entirely: always restore portrait
             try { act?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT } catch (_: Exception) {}
+            // AdMob rewarded interstitial #2 (after watching) — both ExoClick VAST preroll + AdMob enabled
+            if (act != null && watchElapsed >= 60) {
+                try { com.nusanime.app.AdMobAds.preload(act) } catch (_: Exception) {}
+                kotlinx.coroutines.MainScope().launch {
+                    kotlinx.coroutines.delay(400)
+                    com.nusanime.app.AdMobAds.show(act)
+                }
+            }
         }
     }
 
