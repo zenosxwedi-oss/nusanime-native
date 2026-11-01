@@ -120,6 +120,14 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
                     })
                 }
             }
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
+                com.nusanime.app.ui.AdMobBanner()
+            }
+            if (source == Source.Home) {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
+                    androidx.compose.foundation.layout.Spacer(Modifier.height(2.dp))
+                }
+            }
             items(vm.items.size) { i ->
                 val item = vm.items[i]
                 AnimeCard(item) {
