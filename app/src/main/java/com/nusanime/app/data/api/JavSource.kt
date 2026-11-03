@@ -78,10 +78,11 @@ object JavSource {
         } catch (_: Exception) { emptyList() }
     }
 
-    /** Resolve direct m3u8 server-side (app just plays it). */
+    /** Resolve m3u8 server-side; returned path is RELAYED through our server (/hls/...) => works even if ISP blocks the CDN. */
     suspend fun resolveM3u8(embedUrl: String): String? = withContext(Dispatchers.IO) {
         try {
-            gson.fromJson(apiGet("/stream?u=" + android.net.Uri.encode(embedUrl)), StreamRes::class.java).m3u8
+            val rel = gson.fromJson(apiGet("/stream?u=" + android.net.Uri.encode(embedUrl)), StreamRes::class.java).m3u8 ?: return@withContext null
+            if (rel.startsWith("/")) API + rel else rel
         } catch (_: Exception) { null }
     }
 }
