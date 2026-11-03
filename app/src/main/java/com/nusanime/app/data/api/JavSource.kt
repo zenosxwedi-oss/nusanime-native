@@ -24,7 +24,7 @@ object JavSource {
     )
     const val UA = "Mozilla/5.0 (Linux; Android 12; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36"
 
-    private fun get(url: String, referer: String? = null): String? = try {
+    private fun getDirect(url: String, referer: String? = null): String? = try {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.connectTimeout = 10000; conn.readTimeout = 15000
         conn.setRequestProperty("User-Agent", UA)
@@ -33,6 +33,12 @@ object JavSource {
         if (conn.responseCode !in 200..299) null
         else conn.inputStream.bufferedReader().use { it.readText() }
     } catch (_: Exception) { null }
+
+    private val PROXY = "https://proxy.nusanime.web.id?token=nusaproxy2026&url="
+
+    /** Direct first; if blocked/failed, relay via our proxy. */
+    private fun get(url: String, referer: String? = null): String?
+        = getDirect(url, referer) ?: getDirect(PROXY + android.net.Uri.encode(url), referer)
 
     private val RESERVED = setOf(
         "wp-content", "wp-json", "wp-admin", "page", "feed", "comments", "categories",
@@ -116,7 +122,8 @@ object JavSource {
         IFRAME_RE.findAll(h).forEach { m ->
             val u = m.groupValues[1].replace("\\\\", "")
             if (u.startsWith("http") && !u.contains("wp-json") && !u.contains("oembed") &&
-                !u.contains("arenajav") && !u.contains(base) && u.contains("embed")) {
+                !u.contains("arenajav") && !u.contains("tutorial") &&
+                !u.contains("wp-") && !u.contains(base) && u.contains("embed")) {
                 if (!out.containsKey(u)) out[u] = JavServer("Server \${out.size + 1}", u)
             }
         }
