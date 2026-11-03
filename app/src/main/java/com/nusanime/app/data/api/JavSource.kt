@@ -22,7 +22,7 @@ object JavSource {
         Site("https://javsubindo.cloud", "https://javsubindo.cloud"),
         Site("https://arenajav.com", "https://arenajav.com"),
     )
-    private const val UA = "Mozilla/5.0 (Linux; Android 12; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36"
+    const val UA = "Mozilla/5.0 (Linux; Android 12; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36"
 
     private fun get(url: String, referer: String? = null): String? = try {
         val conn = URL(url).openConnection() as HttpURLConnection
@@ -57,8 +57,10 @@ object JavSource {
                 val img = imgs.getOrNull(i) ?: imgs.firstOrNull() ?: ""
                 i++
                 items[slug] = AnimeItem(
-                    id = slug, title = slug.replace("-", " ").replaceFirstChar { it.uppercase() },
-                    poster = img, animeId = "jav:$slug", type = "jav", siteIdx = siteIdx,
+                    title = slug.replace("-", " ").replaceFirstChar { it.uppercase() },
+                    poster = img, animeId = "jav:$slug", episodeId = null, episodes = null,
+                    releasedOn = null, type = "jav", score = null, statusField = null,
+                    estimation = null, genreList = null, siteIdx = siteIdx,
                 )
             }
         }
