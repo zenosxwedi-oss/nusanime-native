@@ -116,4 +116,16 @@ object MovieSource {
             gson.fromJson(json, MbPlay::class.java)
         } catch (_: Exception) { null }
     }
+
+    suspend fun genreList(g: String): List<AnimeItem> = withContext(Dispatchers.IO) {
+        try { toItems(apiGet("/movie/mb/genre?g=" + android.net.Uri.encode(g))) } catch (_: Exception) { emptyList() }
+    }
+
+    suspend fun genreRaw(g: String): List<MItem> = withContext(Dispatchers.IO) {
+        val json = apiGet("/movie/mb/genre?g=" + android.net.Uri.encode(g)) ?: return@withContext emptyList()
+        try {
+            val mb: Array<MbItem> = gson.fromJson(json, Array<MbItem>::class.java)
+            mb.filter { it.subjectId.isNotEmpty() }.map { MItem(slug = "mb_" + it.subjectId, title = it.title, poster = it.poster, site = 0) }
+        } catch (_: Exception) { emptyList() }
+    }
 }

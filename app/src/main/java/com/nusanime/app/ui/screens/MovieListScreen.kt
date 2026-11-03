@@ -1,45 +1,53 @@
 package com.nusanime.app.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Semua Movie (lk21) — grid + tombol muat lagi. */
+private val MB_GENRES = listOf("Populer", "Action", "Comedy", "Horror", "Romance", "Sci-Fi", "Thriller", "Animation", "Adventure", "Drama", "Crime", "Fantasy")
+
+/** Semua Movie (MovieBox) — grid + genre chips + muat otomatis. */
 @Composable
 fun MovieListScreen(onOpenMovie: (String) -> Unit, onBack: () -> Unit) {
-    var items by remember { mutableStateOf<List<com.nusanime.app.data.api.MovieSource.MItem>>(emptyList()) }
-    var page by remember { mutableStateOf(1) }
+    var genre by remember { mutableStateOf("Populer") }
+    var items by remember(genre) { mutableStateOf<List<com.nusanime.app.data.api.MovieSource.MItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
-    var endReached by remember { mutableStateOf(false) }
+    val gridState = rememberLazyGridState()
 
-    suspend fun load(p: Int) {
+    suspend fun load(g: String) {
         loading = true
         val got = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            com.nusanime.app.data.api.MovieSource.latestRaw(p)
+            if (g == "Populer") com.nusanime.app.data.api.MovieSource.latestRaw(1)
+            else com.nusanime.app.data.api.MovieSource.genreRaw(g)
         }
-        if (got.isEmpty()) endReached = true
-        else {
-            val seen = items.map { it.slug }.toSet()
-            items = items + got.filter { it.slug !in seen }
-            page = p
-        }
+        items = got
         loading = false
     }
 
-    LaunchedEffect(Unit) { load(1) }
+    LaunchedEffect(genre) { load(genre) }
 
+    // auto reload when scrolled to bottom is not paged (catalog page is fixed 24) — refresh button instead
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("← Kembali") }
             Text("🎬 Movie — Semua", style = MaterialTheme.typography.titleSmall)
         }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MB_GENRES.forEach { g ->
+                FilterChip(selected = genre == g, onClick = { genre = g }, label = { Text(g) })
+            }
+        }
         LazyVerticalGrid(
+            state = gridState,
             columns = GridCells.Fixed(3),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(12.dp),
@@ -59,11 +67,18 @@ fun MovieListScreen(onOpenMovie: (String) -> Unit, onBack: () -> Unit) {
                     }
                 }
             }
-            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-                Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
-                    if (loading) CircularProgressIndicator(Modifier.size(28.dp))
-                    else if (!endReached) OutlinedButton(onClick = { kotlinx.coroutines.runBlocking { load(page + 1) } }) { Text("Muat lagi") }
-                    else Text("Semua film sudah ditampilkan", style = MaterialTheme.typography.labelSmall)
+            if (loading) {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
+                    Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(Modifier.size(28.dp))
+                    }
+                }
+            }
+            if (!loading && items.isEmpty()) {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
+                    Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+                        Text("Tidak ada hasil", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }

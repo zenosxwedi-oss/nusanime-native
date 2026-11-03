@@ -43,6 +43,13 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
             TextButton(onClick = onBack) { Text("← Kembali") }
             Text("Movie", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if (servers.size > 1) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                servers.forEachIndexed { idx, s ->
+                    FilterChip(selected = current == s, onClick = { current = s }, label = { Text(s.label) })
+                }
+            }
+        }
         if (loading) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else if (current == null) {
@@ -73,12 +80,40 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
                             playWhenReady = true; prepare()
                         }
                     }
-                    DisposableEffect(mp.mpd) { onDispose { player.release() } }
+                    DisposableEffect(mp.mpd) { onDispose {
+                        player.release()
+                        val act0 = ctx as? android.app.Activity ?: return@onDispose
+                        val w0 = act0.window
+                        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w0, true)
+                        androidx.core.view.WindowInsetsControllerCompat(w0, w0.decorView).show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                        act0.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    } }
+                    var isFs by remember(mp.mpd) { mutableStateOf(false) }
+                    val mod = if (isFs) Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black)
+                              else Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black)
+                    LaunchedEffect(isFs) {
+                        val act = ctx as? android.app.Activity ?: return@LaunchedEffect
+                        val w = act.window
+                        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(w, !isFs)
+                        val c = androidx.core.view.WindowInsetsControllerCompat(w, w.decorView)
+                        if (isFs) {
+                            c.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                            c.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                            act.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                        } else {
+                            c.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                            act.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                        }
+                    }
                     AndroidView(
-                        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black),
+                        modifier = mod,
                         factory = { p ->
-                            androidx.media3.ui.PlayerView(p).apply { this.player = player; useController = true }
+                            androidx.media3.ui.PlayerView(p).apply {
+                                this.player = player; useController = true; controllerShowTimeoutMs = 4000
+                                setFullscreenButtonClickListener { fs -> isFs = fs }
+                            }
                         },
+                        update = { v -> v.layoutParams = v.layoutParams?.apply { width = android.view.ViewGroup.LayoutParams.MATCH_PARENT; height = if (isFs) android.view.ViewGroup.LayoutParams.MATCH_PARENT else android.view.ViewGroup.LayoutParams.WRAP_CONTENT } }
                     )
                 }
             }
@@ -148,13 +183,6 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
             )
             }
             }
-            }
-        }
-        if (servers.size > 1) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                servers.forEachIndexed { idx, s ->
-                    FilterChip(selected = current == s, onClick = { current = s }, label = { Text(s.label) })
-                }
             }
         }
     }
