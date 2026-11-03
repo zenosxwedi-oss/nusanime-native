@@ -28,7 +28,7 @@ object JavSource {
     data class JavItem(val slug: String = "", val title: String = "", val poster: String = "", val site: Int = 0)
     data class JavServer(val label: String = "", val url: String = "")
     data class ServersRes(val servers: List<JavServer> = emptyList())
-    data class StreamRes(val m3u8: String? = null)
+    data class StreamRes(val m3u8: String? = null, val m3u8_direct: String? = null)
 
     private fun apiGet(path: String): String? = try {
         val conn = URL(API + path).openConnection() as HttpURLConnection
@@ -78,11 +78,19 @@ object JavSource {
         } catch (_: Exception) { emptyList() }
     }
 
-    /** Resolve m3u8 server-side; returned path is RELAYED through our server (/hls/...) => works even if ISP blocks the CDN. */
+    /** Relay m3u8 (through our server — anti ISP block). */
     suspend fun resolveM3u8(embedUrl: String): String? = withContext(Dispatchers.IO) {
         try {
-            val rel = gson.fromJson(apiGet("/stream?u=" + android.net.Uri.encode(embedUrl)), StreamRes::class.java).m3u8 ?: return@withContext null
+            val r = gson.fromJson(apiGet("/stream?u=" + android.net.Uri.encode(embedUrl)), StreamRes::class.java)
+            val rel = r.m3u8 ?: return@withContext null
             if (rel.startsWith("/")) API + rel else rel
+        } catch (_: Exception) { null }
+    }
+
+    /** Direct m3u8 from CDN (fast when ISP allows). */
+    suspend fun resolveM3u8Direct(embedUrl: String): String? = withContext(Dispatchers.IO) {
+        try {
+            gson.fromJson(apiGet("/stream?u=" + android.net.Uri.encode(embedUrl)), StreamRes::class.java).m3u8_direct
         } catch (_: Exception) { null }
     }
 }

@@ -51,7 +51,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
         // resolve direct stream for current server (native => skip embed ads)
         current?.let { c ->
             val s = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                com.nusanime.app.data.api.JavSource.resolveM3u8(c.url)
+                com.nusanime.app.data.api.JavSource.resolveM3u8Direct(c.url) ?: com.nusanime.app.data.api.JavSource.resolveM3u8(c.url)
             }
             if (s != null) m3u8 = s
             resolving = false
@@ -65,7 +65,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
             resolving = true
             m3u8 = null
             val s = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                com.nusanime.app.data.api.JavSource.resolveM3u8(c.url)
+                com.nusanime.app.data.api.JavSource.resolveM3u8Direct(c.url) ?: com.nusanime.app.data.api.JavSource.resolveM3u8(c.url)
             }
             m3u8 = s
             resolving = false
@@ -83,16 +83,43 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }
             m3u8 != null -> {
-                // NATIVE ExoPlayer — HLS, no embed, no embed ads, hardware codec per device
+                // NATIVE ExoPlayer — HLS relayed via our server. Direct-first w/ relay fallback handled by retry logic below.
+                var triedRelay by remember(m3u8) { mutableStateOf(m3u8!!.contains("/hls/")) }
                 val player = remember(m3u8) {
-                    ExoPlayer.Builder(ctx).build().apply {
-                        setMediaItem(MediaItem.Builder()
-                            .setUri(m3u8)
-                            .setMimeType(MimeTypes.APPLICATION_M3U8)
+                    ExoPlayer.Builder(ctx)
+                        .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                            .setBufferDurationsMs(15000, 60000, 2500, 5000)
                             .build())
-                        playWhenReady = true
-                        prepare()
-                    }
+                        .build().apply {
+                            setMediaItem(MediaItem.Builder()
+                                .setUri(m3u8)
+                                .setMimeType(MimeTypes.APPLICATION_M3U8)
+                                .build())
+                            playWhenReady = true
+                            prepare()
+                            addListener(object : Player.Listener {
+                                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                                    if (!triedRelay) {
+                                        triedRelay = true
+                                        // swap direct URL to relayed: rebuild item via /stream again
+                                        val embed = current?.url ?: return
+                                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                            java.util.concurrent.Executors.newSingleThreadExecutor().execute {
+                                                val rel = kotlinx.coroutines.runBlocking {
+                                                    com.nusanime.app.data.api.JavSource.resolveM3u8(embed)
+                                                }
+                                                if (rel != null) {
+                                                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                                        setMediaItem(MediaItem.Builder().setUri(rel).setMimeType(MimeTypes.APPLICATION_M3U8).build())
+                                                        prepare(); playWhenReady = true
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            })
+                        }
                 }
                 DisposableEffect(m3u8) { onDispose { player.release() } }
                 AndroidView(
