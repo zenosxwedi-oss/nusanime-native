@@ -88,8 +88,23 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                 val playErr = remember(m3u8) { androidx.compose.runtime.mutableStateOf<String?>(null) }
                 val player = remember(m3u8) {
                     ExoPlayer.Builder(ctx)
+                        .setMediaSourceFactory(
+                            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
+                                androidx.media3.datasource.DefaultDataSource.Factory(
+                                    ctx,
+                                    androidx.media3.datasource.DefaultHttpDataSource.Factory()
+                                        .setConnectTimeoutMs(30000)
+                                        .setReadTimeoutMs(30000)
+                                        .setAllowCrossProtocolRedirects(true)
+                                        .setUserAgent(com.nusanime.app.data.api.JAV_UA)
+                                        .setDefaultRequestProperties(mapOf("Referer" to "https://nekovid.xyz/")),
+                                ).setLoadErrorHandlingPolicy(
+                                    androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy(6)
+                                ),
+                            )
+                        )
                         .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                            .setBufferDurationsMs(15000, 60000, 2500, 5000)
+                            .setBufferDurationsMs(30000, 120000, 5000, 15000)
                             .build())
                         .build().apply {
                             setMediaItem(MediaItem.Builder()
