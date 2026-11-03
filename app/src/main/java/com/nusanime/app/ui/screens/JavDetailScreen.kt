@@ -98,9 +98,9 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                                         .setAllowCrossProtocolRedirects(true)
                                         .setUserAgent(com.nusanime.app.data.api.JAV_UA)
                                         .setDefaultRequestProperties(mapOf("Referer" to "https://nekovid.xyz/")),
-                                ).setLoadErrorHandlingPolicy(
-                                    androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy(6)
                                 ),
+                            ).setLoadErrorHandlingPolicy(
+                                androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy(6),
                             )
                         )
                         .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
