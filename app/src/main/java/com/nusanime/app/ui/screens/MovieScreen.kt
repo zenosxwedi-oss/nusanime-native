@@ -22,6 +22,7 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
     var servers by remember(slug) { mutableStateOf<List<com.nusanime.app.data.api.MovieSource.MServer>>(emptyList()) }
     var current by remember(slug) { mutableStateOf<com.nusanime.app.data.api.MovieSource.MServer?>(null) }
     var loading by remember(slug) { mutableStateOf(true) }
+    var stuckAt by remember(slug) { mutableStateOf(0L) }
 
     LaunchedEffect(slug) {
         val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -44,6 +45,14 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
                 Text("Server tidak tersedia", textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         } else {
+            // auto-advance to next server if embed stuck >15s
+            LaunchedEffect(current?.url) {
+                kotlinx.coroutines.delay(15000)
+                if (servers.size > 1) {
+                    val i = servers.indexOf(current)
+                    current = servers[(i + 1) % servers.size]
+                }
+            }
             AndroidView(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 factory = { c ->
@@ -57,7 +66,11 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
                         settings.useWideViewPort = true
                         setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                         webChromeClient = WebChromeClient()
-                        webViewClient = WebViewClient()
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageFinished(v: android.webkit.WebView, url: String?) {
+                                stuckAt = android.os.SystemClock.elapsedRealtime()
+                            }
+                        }
                         loadUrl(current!!.url, mapOf("Referer" to "https://lk21.tel/"))
                     }
                 },

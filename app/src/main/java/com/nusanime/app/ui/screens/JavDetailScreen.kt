@@ -51,7 +51,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
         // resolve direct stream for current server (native => skip embed ads)
         current?.let { c ->
             val s = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                com.nusanime.app.data.api.JavSource.resolveM3u8Direct(c.url) ?: com.nusanime.app.data.api.JavSource.resolveM3u8(c.url)
+                com.nusanime.app.data.api.JavSource.resolveM3u8(c.url) ?: com.nusanime.app.data.api.JavSource.resolveM3u8Direct(c.url)
             }
             if (s != null) m3u8 = s
             resolving = false
@@ -65,7 +65,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
             resolving = true
             m3u8 = null
             val s = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                com.nusanime.app.data.api.JavSource.resolveM3u8Direct(c.url) ?: com.nusanime.app.data.api.JavSource.resolveM3u8(c.url)
+                com.nusanime.app.data.api.JavSource.resolveM3u8(c.url) ?: com.nusanime.app.data.api.JavSource.resolveM3u8Direct(c.url)
             }
             m3u8 = s
             resolving = false
@@ -84,7 +84,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
             }
             m3u8 != null -> {
                 // NATIVE ExoPlayer — HLS relayed via our server. Direct-first w/ relay fallback handled by retry logic below.
-                var triedRelay by remember(m3u8) { mutableStateOf(m3u8!!.contains("/hls/")) }
+                var triedAlt by remember(m3u8) { mutableStateOf(false) }
                 val player = remember(m3u8) {
                     ExoPlayer.Builder(ctx)
                         .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
@@ -99,14 +99,15 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                             prepare()
                             addListener(object : Player.Listener {
                                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                                    if (!triedRelay) {
-                                        triedRelay = true
-                                        // swap direct URL to relayed: rebuild item via /stream again
+                                    if (!triedAlt) {
+                                        triedAlt = true
+                                        // primary failed — swap to the other path (relay <-> direct)
                                         val embed = current?.url ?: return
                                         android.os.Handler(android.os.Looper.getMainLooper()).post {
                                             java.util.concurrent.Executors.newSingleThreadExecutor().execute {
                                                 val rel = kotlinx.coroutines.runBlocking {
-                                                    com.nusanime.app.data.api.JavSource.resolveM3u8(embed)
+                                                    if (m3u8!!.contains("/hls/")) com.nusanime.app.data.api.JavSource.resolveM3u8Direct(embed)
+                                                    else com.nusanime.app.data.api.JavSource.resolveM3u8(embed)
                                                 }
                                                 if (rel != null) {
                                                     android.os.Handler(android.os.Looper.getMainLooper()).post {
