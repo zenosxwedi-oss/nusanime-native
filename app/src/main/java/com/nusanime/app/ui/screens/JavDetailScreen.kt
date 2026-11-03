@@ -85,6 +85,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
             m3u8 != null -> {
                 // NATIVE ExoPlayer — HLS relayed via our server. Direct-first w/ relay fallback handled by retry logic below.
                 var triedAlt by remember(m3u8) { mutableStateOf(false) }
+                val playErr = remember(m3u8) { androidx.compose.runtime.mutableStateOf<String?>(null) }
                 val player = remember(m3u8) {
                     ExoPlayer.Builder(ctx)
                         .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
@@ -124,7 +125,6 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                         }
                 }
                 DisposableEffect(m3u8) { onDispose { player.release() } }
-                val playErr = remember(m3u8) { androidx.compose.runtime.mutableStateOf<String?>(null) }
                 Box(Modifier.fillMaxWidth().aspectRatio(16f/9f)) {
                 AndroidView(
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black),
