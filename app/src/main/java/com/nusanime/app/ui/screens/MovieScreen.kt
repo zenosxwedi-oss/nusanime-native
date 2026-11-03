@@ -66,7 +66,7 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
                         val cookie = mp.cookie ?: ""
                         val dsFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
                             .setUserAgent("ExoPlayerLib/2.18.7")
-                            .setDefaultRequestProperty("Cookie", cookie)
+                            .setDefaultRequestProperties(mapOf("Cookie" to cookie))
                         androidx.media3.exoplayer.ExoPlayer.Builder(ctx).build().apply {
                             setMediaSource(androidx.media3.exoplayer.dash.DashMediaSource.Factory(dsFactory)
                                 .createMediaSource(androidx.media3.common.MediaItem.Builder().setUri(mp.mpd).build()))
