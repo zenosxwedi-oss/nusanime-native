@@ -104,7 +104,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                             controllerShowTimeoutMs = 4000
                             setFullscreenButtonClickListener { isFs ->
                                 // toggle landscape fullscreen
-                                val act = p.context as? android.app.Activity ?: return@setFullscreenButtonClickListener
+                                val act = context as? android.app.Activity ?: return@setFullscreenButtonClickListener
                                 if (isFs) act.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                                 else act.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
                             }
