@@ -58,7 +58,8 @@ object Routes {
     const val DOWNLOADS = "downloads"
     const val SETTINGS = "settings"
     const val DETAIL = "detail/{animeId}"
-    const val JAV = "jav?url={url}"
+    const val JAV = "jav/{slug}"
+    const val JAVGENRE = "javgenre"
     const val PLAYER = "player/{episodeId}"
     fun detail(animeId: String) = "detail/$animeId"
     fun player(episodeId: String) = "player/$episodeId"
@@ -225,20 +226,33 @@ fun App(openEpisode: String? = null) {
                     Source.Home,
                     { nav.navigate(Routes.detail(it)) },
                     { nav.navigate(Routes.player(it)) },
-                ) { javUrl -> nav.navigate("jav?url=" + java.net.URLEncoder.encode(javUrl, "UTF-8")) }
+                ) { slug ->
+                    if (slug == "__GENRE__") nav.navigate(Routes.JAVGENRE)
+                    else nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8"))
+                }
+            }
+            composable(Routes.JAVGENRE) {
+                com.nusanime.app.ui.screens.JavGenreScreen(
+                    onOpen = { slug -> nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                    onBack = { nav.popBackStack() },
+                )
             }
             composable(
                 Routes.JAV,
-                arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" }),
+                arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType }),
             ) { entry ->
-                val url = java.net.URLDecoder.decode(entry.arguments?.getString("url") ?: "", "UTF-8")
-                com.nusanime.app.ui.screens.JavDetailScreen(url) { nav.popBackStack() }
+                val slug = java.net.URLDecoder.decode(entry.arguments?.getString("slug") ?: "", "UTF-8")
+                com.nusanime.app.ui.screens.JavDetailScreen(slug) { nav.popBackStack() }
             }
             composable(Routes.ONGOING) { ListScreen(Source.Ongoing, { nav.navigate(Routes.detail(it)) }) { nav.navigate(Routes.player(it)) } }
             composable(Routes.COMPLETED) { ListScreen(Source.Completed, { nav.navigate(Routes.detail(it)) }) }
             composable(Routes.SCHEDULE) { ScheduleScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.GENRE) { com.nusanime.app.ui.screens.GenreScreen { nav.navigate(Routes.detail(it)) } }
-            composable(Routes.SEARCH) { SearchScreen { nav.navigate(Routes.detail(it)) } }
+            composable(Routes.SEARCH) {
+                SearchScreen({ nav.navigate(Routes.detail(it)) }) { slug ->
+                    nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8"))
+                }
+            }
             composable(Routes.BOOKMARKS) { BookmarksScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.HISTORY) { HistoryScreen { nav.navigate(Routes.player(it)) } }
             composable(Routes.DOWNLOADS) { DownloadsScreen() }

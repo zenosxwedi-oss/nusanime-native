@@ -1,5 +1,6 @@
 package com.nusanime.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -139,12 +140,14 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
                         Text("18+", color = androidx.compose.ui.graphics.Color(0xFFE53935), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         Spacer(Modifier.width(6.dp))
                         Text("Konten Dewasa", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Spacer(Modifier.weight(1f))
+                        Text("Lihat semua →", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { onOpen18("__GENRE__") })
                     }
                 }
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
                         javItems.take(10).forEach { j ->
-                            val link = "https://nekopoi.care/" + (j.animeId?.removePrefix("jav:") ?: "") + "/"
+                            val link = j.animeId?.removePrefix("jav:") ?: ""
                             androidx.compose.material3.Card(onClick = { onOpen18(link) }) {
                                 Column(Modifier.width(110.dp)) {
                                     coil.compose.AsyncImage(

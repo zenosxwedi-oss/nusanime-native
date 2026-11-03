@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -38,6 +39,8 @@ class SearchViewModel : ViewModel() {
         }
     }
 
+    var javResults by mutableStateOf<List<AnimeItem>>(emptyList())
+
     fun search(q: String) {
         viewModelScope.launch {
             loading = true
@@ -50,12 +53,16 @@ class SearchViewModel : ViewModel() {
                 "Gagal mencari: ${e.message ?: "kesalahan jaringan"}"
             }
             loading = false
+            // 18+ search (parallel, non-blocking, only if enabled)
+            if (com.nusanime.app.data.api.AdultPrefs.enabled(com.nusanime.app.MainApplication.instance)) {
+                try { javResults = com.nusanime.app.data.api.JavSource.search(q.trim()) } catch (_: Exception) { javResults = emptyList() }
+            } else javResults = emptyList()
         }
     }
 }
 
 @Composable
-fun SearchScreen(onOpenDetail: (String) -> Unit) {
+fun SearchScreen(onOpenDetail: (String) -> Unit, onOpen18: (String) -> Unit = {}) {
     val vm: SearchViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     Column(Modifier.fillMaxSize()) {
@@ -84,8 +91,16 @@ fun SearchScreen(onOpenDetail: (String) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                if (vm.javResults.isNotEmpty()) {
+                    item(span = { GridItemSpan(3) }) {
+                        Text("🔴 18+ — Konten Dewasa", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFFE53935))
+                    }
+                }
                 items(vm.results) { item ->
                     AnimeCard(item) { item.animeId?.let(onOpenDetail) }
+                }
+                items(vm.javResults) { j ->
+                    AnimeCard(j) { j.animeId?.removePrefix("jav:")?.let(onOpen18) }
                 }
             }
         }
