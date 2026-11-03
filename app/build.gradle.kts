@@ -13,8 +13,8 @@ android {
         applicationId = "com.nusanime.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 52
-        versionName = "3.9.28"
+        versionCode = 53
+        versionName = "3.9.29"
     }
 
     signingConfigs {

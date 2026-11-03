@@ -44,6 +44,15 @@ object MovieSource {
         try { gson.fromJson(apiGet("/movie/latest?page=$page"), Array<MItem>::class.java).toList() } catch (_: Exception) { emptyList() }
     }
     suspend fun search(q: String): List<AnimeItem> = withContext(Dispatchers.IO) { toItems(apiGet("/movie/search?q=" + android.net.Uri.encode(q))) }
+    /** Resolve the native HD stream (server-side vidsrc chain, relayed). */
+    suspend fun hdStream(imdb: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val r = gson.fromJson(apiGet("/movie/play?imdb=" + android.net.Uri.encode(imdb)), Map::class.java)
+            val rel = r?.get("m3u8") as? String ?: return@withContext null
+            if (rel.startsWith("/")) API + rel else rel
+        } catch (_: Exception) { null }
+    }
+
     suspend fun embeds(slug: String): List<MServer> = withContext(Dispatchers.IO) {
         try { gson.fromJson(apiGet("/movie/post?slug=" + android.net.Uri.encode(slug)), MServers::class.java).servers }
         catch (_: Exception) { emptyList() }

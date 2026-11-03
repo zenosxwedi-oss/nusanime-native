@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.background
 
 /** Movie watch screen — WebView vidlink embed (multi-server). */
 @SuppressLint("SetJavaScriptEnabled")
@@ -43,6 +44,35 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
         } else if (current == null) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 Text("Server tidak tersedia", textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+        } else if (current!!.url.startsWith("movieplay:")) {
+            // NATIVE HD — server-resolved vidsrc m3u8 via our relay
+            var m3u8 by remember(current?.url) { mutableStateOf<String?>(null) }
+            LaunchedEffect(current?.url) {
+                m3u8 = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    com.nusanime.app.data.api.MovieSource.hdStream(current!!.url.removePrefix("movieplay:"))
+                }
+            }
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                val mm = m3u8
+                if (mm == null) CircularProgressIndicator()
+                else {
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    val player = remember(mm) {
+                        androidx.media3.exoplayer.ExoPlayer.Builder(ctx).build().apply {
+                            setMediaItem(androidx.media3.common.MediaItem.Builder().setUri(mm)
+                                .setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8).build())
+                            playWhenReady = true; prepare()
+                        }
+                    }
+                    DisposableEffect(mm) { onDispose { player.release() } }
+                    AndroidView(
+                        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black),
+                        factory = { p ->
+                            androidx.media3.ui.PlayerView(p).apply { this.player = player; useController = true }
+                        },
+                    )
+                }
             }
         } else {
             // auto-advance to next server if embed stuck >15s
