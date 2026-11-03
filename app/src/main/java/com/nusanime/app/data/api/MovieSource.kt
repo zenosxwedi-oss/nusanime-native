@@ -28,12 +28,24 @@ object MovieSource {
     fun toItems(json: String?): List<AnimeItem> {
         if (json == null) return emptyList()
         return try {
-            gson.fromJson(json, Array<MItem>::class.java).map { m ->
-                AnimeItem(
-                    title = m.title, poster = m.poster, animeId = "movie:" + m.slug,
-                    episodeId = null, episodes = null, releasedOn = null, type = "movie",
-                    score = null, statusField = null, estimation = null, genreList = null, siteIdx = 0,
-                )
+            // MovieBox items: {title, subjectId, poster, year}; legacy lk21: {slug, title, poster}
+            val mb: Array<MbItem>? = try { gson.fromJson(json, Array<MbItem>::class.java) } catch (_: Exception) { null }
+            if (mb != null && mb.isNotEmpty() && mb[0].subjectId.isNotEmpty()) {
+                mb.filter { it.subjectId.isNotEmpty() }.map {
+                    AnimeItem(
+                        title = it.title, poster = it.poster, animeId = "mb:" + it.subjectId,
+                        episodeId = null, episodes = null, releasedOn = it.year.ifEmpty { null }, type = "movie",
+                        score = null, statusField = null, estimation = null, genreList = null, siteIdx = 0,
+                    )
+                }
+            } else {
+                gson.fromJson(json, Array<MItem>::class.java).map { m ->
+                    AnimeItem(
+                        title = m.title, poster = m.poster, animeId = "movie:" + m.slug,
+                        episodeId = null, episodes = null, releasedOn = null, type = "movie",
+                        score = null, statusField = null, estimation = null, genreList = null, siteIdx = 0,
+                    )
+                }
             }
         } catch (_: Exception) { emptyList() }
     }
@@ -41,7 +53,13 @@ object MovieSource {
     suspend fun latest(page: Int = 1): List<AnimeItem> = withContext(Dispatchers.IO) { toItems(apiGet("/movie/latest?page=$page")) }
 
     suspend fun latestRaw(page: Int = 1): List<MItem> = withContext(Dispatchers.IO) {
-        try { gson.fromJson(apiGet("/movie/latest?page=$page"), Array<MItem>::class.java).toList() } catch (_: Exception) { emptyList() }
+        val json = apiGet("/movie/latest") ?: return@withContext emptyList()
+        try {
+            val mb: Array<MbItem> = gson.fromJson(json, Array<MbItem>::class.java)
+            mb.filter { it.subjectId.isNotEmpty() }.map { MItem(slug = "mb_" + it.subjectId, title = it.title, poster = it.poster, site = 0) }
+        } catch (_: Exception) {
+            try { gson.fromJson(json, Array<MItem>::class.java).toList() } catch (_: Exception) { emptyList() }
+        }
     }
     suspend fun search(q: String): List<AnimeItem> = withContext(Dispatchers.IO) { toItems(apiGet("/movie/search?q=" + android.net.Uri.encode(q))) }
     /** Resolve the native HD stream (server-side vidsrc chain, relayed). */

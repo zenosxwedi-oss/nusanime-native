@@ -228,10 +228,6 @@ fun App(openEpisode: String? = null) {
                     Source.Home,
                     { nav.navigate(Routes.detail(it)) },
                     { nav.navigate(Routes.player(it)) },
-                    onOpen18 = { slug ->
-                        if (slug == "__GENRE__") nav.navigate(Routes.JAVGENRE)
-                        else nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8"))
-                    },
                     onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MOVIELIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
                 )
             }
@@ -248,19 +244,6 @@ fun App(openEpisode: String? = null) {
                 val slug = java.net.URLDecoder.decode(be.arguments?.getString("slug") ?: "", "UTF-8")
                 com.nusanime.app.ui.screens.MovieScreen(slug) { nav.popBackStack() }
             }
-            composable(Routes.JAVGENRE) {
-                com.nusanime.app.ui.screens.JavGenreScreen(
-                    onOpen = { slug -> nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
-                    onBack = { nav.popBackStack() },
-                )
-            }
-            composable(
-                Routes.JAV,
-                arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType }),
-            ) { entry ->
-                val slug = java.net.URLDecoder.decode(entry.arguments?.getString("slug") ?: "", "UTF-8")
-                com.nusanime.app.ui.screens.JavDetailScreen(slug) { nav.popBackStack() }
-            }
             composable(Routes.ONGOING) { ListScreen(Source.Ongoing, { nav.navigate(Routes.detail(it)) }) { nav.navigate(Routes.player(it)) } }
             composable(Routes.COMPLETED) { ListScreen(Source.Completed, { nav.navigate(Routes.detail(it)) }) }
             composable(Routes.SCHEDULE) { ScheduleScreen { nav.navigate(Routes.detail(it)) } }
@@ -268,7 +251,6 @@ fun App(openEpisode: String? = null) {
             composable(Routes.SEARCH) {
                 SearchScreen(
                     onOpenDetail = { nav.navigate(Routes.detail(it)) },
-                    onOpen18 = { slug -> nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
                     onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MOVIELIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
                 )
             }

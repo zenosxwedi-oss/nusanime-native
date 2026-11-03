@@ -39,70 +39,7 @@ fun SettingsScreen() {
         }
 
         Spacer(Modifier.height(8.dp))
-        // 18+ mode toggle
-        var adult by remember { mutableStateOf(com.nusanime.app.data.api.AdultPrefs.enabled(ctx)) }
-        var showAgeDialog by remember { mutableStateOf(false) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.weight(1f)) {
-                Text("Mode 18+", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text(
-                    "Menampilkan konten dewasa di Beranda. Hanya untuk usia 18 tahun ke atas.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(
-                checked = adult,
-                onCheckedChange = { on ->
-                    if (on) showAgeDialog = true else { adult = false; com.nusanime.app.data.api.AdultPrefs.set(ctx, false) }
-                },
-            )
-        }
-        if (showAgeDialog) {
-            AlertDialog(
-                onDismissRequest = { showAgeDialog = false },
-                title = { Text("Konfirmasi Usia") },
-                text = { Text("Konten 18+ mengandung materi dewasa. Dengan mengaktifkan, kamu menyatakan berusia 18 tahun atau lebih dan bertanggung jawab penuh atas pilihan ini.") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        showAgeDialog = false
-                        adult = true
-                        com.nusanime.app.data.api.AdultPrefs.set(ctx, true)
-                    }) { Text("Saya 18+") }
-                },
-                dismissButton = { TextButton(onClick = { showAgeDialog = false }) { Text("Batal") } },
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        Button(
-            enabled = !checking && !upState.active,
-            onClick = {
-                scope.launch {
-                    checking = true
-                    status = "Memeriksa…"
-                    val info = SelfUpdater.latest(ctx)
-                    checking = false
-                    if (info == null) {
-                        status = "Gagal memeriksa (cek internet)"
-                    } else if (SelfUpdater.isNewer(info.versionName, current)) {
-                        remote = info
-                        status = "Versi baru tersedia: v${info.versionName}"
-                    } else {
-                        remote = null
-                        status = "Sudah versi terbaru ✅"
-                    }
-                }
-            },
-        ) { Text(if (checking) "Memeriksa…" else "Cek Pembaruan") }
-
-        remote?.let { info ->
-            Button(
-                enabled = !upState.active,
-                onClick = { UpdateState.start(ctx, info) },
-            ) { Text(if (upState.active) "Mengunduh…" else "Unduh v${info.versionName} (bisa sambil nonton)") }
-        }
+}
 
         if (upState.ready != null) {
             Button(onClick = { UpdateState.install(ctx) }) { Text("Install update sekarang") }

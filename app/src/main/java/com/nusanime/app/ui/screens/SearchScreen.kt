@@ -39,7 +39,6 @@ class SearchViewModel : ViewModel() {
         }
     }
 
-    var javResults by mutableStateOf<List<AnimeItem>>(emptyList())
     var movieResults by mutableStateOf<List<AnimeItem>>(emptyList())
     var mbResults by mutableStateOf<List<AnimeItem>>(emptyList())
 
@@ -59,10 +58,6 @@ class SearchViewModel : ViewModel() {
             try { movieResults = com.nusanime.app.data.api.MovieSource.search(q.trim()) } catch (_: Exception) { movieResults = emptyList() }
             // MovieBox search (native 1080p)
             try { mbResults = com.nusanime.app.data.api.MovieSource.mbSearch(q.trim()) } catch (_: Exception) { mbResults = emptyList() }
-            // 18+ search (parallel, non-blocking, only if enabled)
-            if (com.nusanime.app.data.api.AdultPrefs.enabled(com.nusanime.app.MainApplication.instance)) {
-                try { javResults = com.nusanime.app.data.api.JavSource.search(q.trim()) } catch (_: Exception) { javResults = emptyList() }
-            } else javResults = emptyList()
         }
     }
 }
@@ -107,16 +102,8 @@ fun SearchScreen(onOpenDetail: (String) -> Unit, onOpen18: (String) -> Unit = {}
                         Text("🎬 Movie — MovieBox HD", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                     }
                 }
-                if (vm.javResults.isNotEmpty()) {
-                    item(span = { GridItemSpan(3) }) {
-                        Text("🔴 18+ — Konten Dewasa", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFFE53935))
-                    }
-                }
                 items(vm.results) { item ->
                     AnimeCard(item) { item.animeId?.let(onOpenDetail) }
-                }
-                items(vm.javResults) { j ->
-                    AnimeCard(j) { j.animeId?.removePrefix("jav:")?.let(onOpen18) }
                 }
                 items(vm.movieResults) { m ->
                     AnimeCard(m) { m.animeId?.removePrefix("movie:")?.let(onOpenMovie) }

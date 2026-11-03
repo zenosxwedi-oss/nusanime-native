@@ -100,14 +100,8 @@ fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (S
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit, onOpen18: (String) -> Unit = {}, onOpenMovie: (String) -> Unit = {}) {
-    val ctx18 = androidx.compose.ui.platform.LocalContext.current
-    var adultOn by remember { mutableStateOf(com.nusanime.app.data.api.AdultPrefs.enabled(ctx18)) }
-    var javItems by remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
     var movieItems by remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
-    LaunchedEffect(adultOn) {
-        if (adultOn && source == Source.Home && javItems.isEmpty()) {
-            javItems = com.nusanime.app.data.api.JavSource.latest()
-        }
+    LaunchedEffect(Unit) {
         if (source == Source.Home && movieItems.isEmpty()) {
             movieItems = com.nusanime.app.data.api.MovieSource.latest()
         }
@@ -148,7 +142,7 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
                             movieItems.take(12).forEach { m ->
-                                androidx.compose.material3.Card(onClick = { m.animeId?.removePrefix("movie:")?.let(onOpenMovie) }) {
+                                androidx.compose.material3.Card(onClick = { m.animeId?.let(onOpenMovie) }) {
                                     Column(Modifier.width(100.dp)) {
                                         coil.compose.AsyncImage(
                                             model = m.poster,
@@ -157,57 +151,6 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
                                             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                         )
                                         Text(m.title ?: "", maxLines = 2, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(5.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if (adultOn && source == Source.Home && javItems.isNotEmpty()) {
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-                        Text("18+", color = androidx.compose.ui.graphics.Color(0xFFE53935), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Konten Dewasa", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                        Spacer(Modifier.weight(1f))
-                        Text("Lihat semua →", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { onOpen18("__GENRE__") })
-                    }
-                }
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
-                        javItems.take(30).forEach { j ->
-                            val link = j.animeId?.removePrefix("jav:") ?: ""
-                            androidx.compose.material3.Card(onClick = { onOpen18(link) }) {
-                                Column(Modifier.width(110.dp)) {
-                                    coil.compose.AsyncImage(
-                                        model = j.poster,
-                                        contentDescription = j.title,
-                                        modifier = Modifier.fillMaxWidth().height(150.dp),
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                    )
-                                    Text(j.title ?: "", maxLines = 2, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
-                                }
-                            }
-                        }
-                    }
-                    // Muat lebih banyak: tampilkan 30 pertama; sisanya grid penuh di bawah
-                    val rest = javItems.drop(30)
-                    if (rest.isNotEmpty()) {
-                        rest.chunked(3).forEach { rowItems ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
-                                rowItems.forEach { j ->
-                                    val link = j.animeId?.removePrefix("jav:") ?: ""
-                                    androidx.compose.material3.Card(onClick = { onOpen18(link) }, modifier = Modifier.weight(1f)) {
-                                        Column {
-                                            coil.compose.AsyncImage(
-                                                model = j.poster,
-                                                contentDescription = j.title,
-                                                modifier = Modifier.fillMaxWidth().height(150.dp),
-                                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                            )
-                                            Text(j.title ?: "", maxLines = 2, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
-                                        }
                                     }
                                 }
                             }
