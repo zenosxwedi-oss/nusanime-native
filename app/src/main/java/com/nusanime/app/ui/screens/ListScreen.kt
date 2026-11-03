@@ -144,10 +144,10 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp, bottom = 8.dp)) {
                             Text("🎬 Movie", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                             Spacer(Modifier.weight(1f))
-                            Text("lk21", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = { onOpenMovie("__ALL__") }) { Text("Lihat semua") }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
-                            movieItems.take(20).forEach { m ->
+                            movieItems.take(12).forEach { m ->
                                 androidx.compose.material3.Card(onClick = { m.animeId?.removePrefix("movie:")?.let(onOpenMovie) }) {
                                     Column(Modifier.width(100.dp)) {
                                         coil.compose.AsyncImage(

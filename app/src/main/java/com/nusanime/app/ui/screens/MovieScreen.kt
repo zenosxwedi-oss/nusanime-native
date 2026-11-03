@@ -53,8 +53,11 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
                     current = servers[(i + 1) % servers.size]
                 }
             }
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
             AndroidView(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.fillMaxSize(),
                 factory = { c ->
                     WebView(c).apply {
                         settings.javaScriptEnabled = true
@@ -76,6 +79,8 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
                 },
                 update = { wv -> if (current != null && wv.url != current!!.url) wv.loadUrl(current!!.url, mapOf("Referer" to "https://lk21.tel/")) },
             )
+            }
+            }
         }
         if (servers.size > 1) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

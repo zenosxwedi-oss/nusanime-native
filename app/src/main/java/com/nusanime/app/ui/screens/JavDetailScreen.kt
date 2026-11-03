@@ -124,7 +124,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                 }
                 DisposableEffect(m3u8) { onDispose { player.release() } }
                 AndroidView(
-                    modifier = Modifier.fillMaxWidth().weight(1f).background(androidx.compose.ui.graphics.Color.Black),
+                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black),
                     factory = { p ->
                         PlayerView(p).apply {
                             this.player = player
@@ -142,8 +142,9 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
             }
             current != null -> {
                 // FALLBACK WebView
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 AndroidView(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
                     factory = { c ->
                         WebView(c).apply {
                             settings.javaScriptEnabled = true
@@ -168,6 +169,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                     },
                     update = { wv -> if (wv.url != current!!.url) wv.loadUrl(current!!.url, mapOf("Referer" to "https://javsubindo.com/")) },
                 )
+                }
             }
             else -> {
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {

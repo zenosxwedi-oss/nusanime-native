@@ -61,6 +61,7 @@ object Routes {
     const val JAV = "jav/{slug}"
     const val JAVGENRE = "javgenre"
     const val MOVIE = "movie/{slug}"
+        const val MOVIELIST = "movielist"
     const val PLAYER = "player/{episodeId}"
     fun detail(animeId: String) = "detail/$animeId"
     fun player(episodeId: String) = "player/$episodeId"
@@ -231,7 +232,13 @@ fun App(openEpisode: String? = null) {
                         if (slug == "__GENRE__") nav.navigate(Routes.JAVGENRE)
                         else nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8"))
                     },
-                    onOpenMovie = { slug -> nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                    onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MOVIELIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                )
+            }
+            composable(Routes.MOVIELIST) {
+                com.nusanime.app.ui.screens.MovieListScreen(
+                    onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MOVIELIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                    onBack = { nav.popBackStack() },
                 )
             }
             composable(
@@ -262,7 +269,7 @@ fun App(openEpisode: String? = null) {
                 SearchScreen(
                     onOpenDetail = { nav.navigate(Routes.detail(it)) },
                     onOpen18 = { slug -> nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
-                    onOpenMovie = { slug -> nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                    onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MOVIELIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
                 )
             }
             composable(Routes.BOOKMARKS) { BookmarksScreen { nav.navigate(Routes.detail(it)) } }

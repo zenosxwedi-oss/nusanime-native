@@ -39,6 +39,10 @@ object MovieSource {
     }
 
     suspend fun latest(page: Int = 1): List<AnimeItem> = withContext(Dispatchers.IO) { toItems(apiGet("/movie/latest?page=$page")) }
+
+    suspend fun latestRaw(page: Int = 1): List<MItem> = withContext(Dispatchers.IO) {
+        try { gson.fromJson(apiGet("/movie/latest?page=$page"), Array<MItem>::class.java).toList() } catch (_: Exception) { emptyList() }
+    }
     suspend fun search(q: String): List<AnimeItem> = withContext(Dispatchers.IO) { toItems(apiGet("/movie/search?q=" + android.net.Uri.encode(q))) }
     suspend fun embeds(slug: String): List<MServer> = withContext(Dispatchers.IO) {
         try { gson.fromJson(apiGet("/movie/post?slug=" + android.net.Uri.encode(slug)), MServers::class.java).servers }
