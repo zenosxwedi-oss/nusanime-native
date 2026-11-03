@@ -236,7 +236,7 @@ fun App(openEpisode: String? = null) {
             }
             composable(
                 Routes.MOVIE,
-                arguments = listOf(navArgument("slug") { type = NavType.StringType }),
+                arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType }),
             ) { be ->
                 val slug = java.net.URLDecoder.decode(be.arguments?.getString("slug") ?: "", "UTF-8")
                 com.nusanime.app.ui.screens.MovieScreen(slug) { nav.popBackStack() }
