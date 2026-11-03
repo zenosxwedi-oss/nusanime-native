@@ -99,7 +99,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                             prepare()
                             addListener(object : Player.Listener {
                                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                                    playErr = "Error: " + error.errorCode
+                                    playErr.value = "Error: " + error.errorCode
                                     if (!triedAlt) {
                                         triedAlt = true
                                         // primary failed — swap to the other path (relay <-> direct)
@@ -124,7 +124,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                         }
                 }
                 DisposableEffect(m3u8) { onDispose { player.release() } }
-                var playErr by remember(m3u8) { mutableStateOf<String?>(null) }
+                val playErr = remember(m3u8) { androidx.compose.runtime.mutableStateOf<String?>(null) }
                 Box(Modifier.fillMaxWidth().aspectRatio(16f/9f)) {
                 AndroidView(
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black),
@@ -142,7 +142,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                         }
                     },
                 )
-                playErr?.let { Text(it, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center)) }
+                playErr.value?.let { Text(it, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center)) }
                 }
             }
             current != null -> {
