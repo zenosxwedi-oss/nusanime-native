@@ -22,6 +22,21 @@ object SelfUpdater {
     data class ReleaseInfo(val versionName: String, val versionCode: Int, val apkUrl: String)
 
     suspend fun latest(context: Context): ReleaseInfo? = withContext(Dispatchers.IO) {
+        // 1) coba mirror sendiri (lebih cepat & stabil di Indonesia)
+        try {
+            val c1 = URL("https://vpn.nusanime.web.id/apk/latest.json").openConnection() as HttpURLConnection
+            c1.connectTimeout = 8000; c1.readTimeout = 10000
+            c1.setRequestProperty("User-Agent", "okhttp/4.12.0")
+            if (c1.responseCode == 200) {
+                val b = c1.inputStream.bufferedReader().readText()
+                c1.disconnect()
+                val j = JSONObject(b)
+                val v = j.getString("versionName"); val url = j.getString("apkUrl")
+                return@withContext ReleaseInfo(versionName = v, versionCode = j.optInt("versionCode", -1), apkUrl = url)
+            }
+            c1.disconnect()
+        } catch (_: Exception) { }
+        // 2) fallback GitHub
         try {
             val conn = URL("https://api.github.com/repos/$REPO/releases/latest").openConnection() as HttpURLConnection
             conn.connectTimeout = 10000
