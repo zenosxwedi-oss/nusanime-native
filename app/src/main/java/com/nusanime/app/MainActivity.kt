@@ -233,6 +233,7 @@ fun App(openEpisode: String? = null) {
                 },
                 onOpenMovie = { slug -> nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
             )
+        }
             composable(
                 Routes.MOVIE,
                 arguments = listOf(navArgument("slug") { type = NavType.StringType }),
