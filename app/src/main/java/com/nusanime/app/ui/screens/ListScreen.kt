@@ -99,6 +99,14 @@ fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (S
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit) {
+    val ctx18 = androidx.compose.ui.platform.LocalContext.current
+    var adultOn by remember { mutableStateOf(com.nusanime.app.data.api.AdultPrefs.enabled(ctx18)) }
+    var javItems by remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
+    LaunchedEffect(adultOn) {
+        if (adultOn && source == Source.Home && javItems.isEmpty()) {
+            javItems = com.nusanime.app.data.api.JavSource.latest()
+        }
+    }
     PullToRefreshBox(
         isRefreshing = vm.refreshing,
         onRefresh = { vm.refresh() },
@@ -124,15 +132,6 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
             }
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
                 com.nusanime.app.ui.AdMobBanner()
-            }
-            // 18+ section (only if enabled in Settings)
-            val ctx18 = androidx.compose.ui.platform.LocalContext.current
-            var adultOn by remember { mutableStateOf(com.nusanime.app.data.api.AdultPrefs.enabled(ctx18)) }
-            var javItems by remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
-            LaunchedEffect(adultOn) {
-                if (adultOn && source == Source.Home && javItems.isEmpty()) {
-                    javItems = com.nusanime.app.data.api.JavSource.latest()
-                }
             }
             if (adultOn && source == Source.Home && javItems.isNotEmpty()) {
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
