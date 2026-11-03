@@ -58,6 +58,7 @@ object Routes {
     const val DOWNLOADS = "downloads"
     const val SETTINGS = "settings"
     const val DETAIL = "detail/{animeId}"
+    const val JAV = "jav?url={url}"
     const val PLAYER = "player/{episodeId}"
     fun detail(animeId: String) = "detail/$animeId"
     fun player(episodeId: String) = "player/$episodeId"
@@ -219,7 +220,20 @@ fun App(openEpisode: String? = null) {
             startDestination = "splash",
             modifier = Modifier.padding(pad),
         ) {
-            composable(Routes.HOME) { ListScreen(Source.Home, { nav.navigate(Routes.detail(it)) }) { nav.navigate(Routes.player(it)) } }
+            composable(Routes.HOME) {
+                ListScreen(
+                    Source.Home,
+                    { nav.navigate(Routes.detail(it)) },
+                    { nav.navigate(Routes.player(it)) },
+                ) { javUrl -> nav.navigate("jav?url=" + java.net.URLEncoder.encode(javUrl, "UTF-8")) }
+            }
+            composable(
+                Routes.JAV,
+                arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" }),
+            ) { entry ->
+                val url = java.net.URLDecoder.decode(entry.arguments?.getString("url") ?: "", "UTF-8")
+                com.nusanime.app.ui.screens.JavDetailScreen(url) { nav.popBackStack() }
+            }
             composable(Routes.ONGOING) { ListScreen(Source.Ongoing, { nav.navigate(Routes.detail(it)) }) { nav.navigate(Routes.player(it)) } }
             composable(Routes.COMPLETED) { ListScreen(Source.Completed, { nav.navigate(Routes.detail(it)) }) }
             composable(Routes.SCHEDULE) { ScheduleScreen { nav.navigate(Routes.detail(it)) } }

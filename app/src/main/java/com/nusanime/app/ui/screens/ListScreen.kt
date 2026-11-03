@@ -83,7 +83,7 @@ class ListViewModel(private val source: Source) : ViewModel() {
 }
 
 @Composable
-fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit = {}) {
+fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit = {}, onOpen18: (String) -> Unit = {}) {
     val vm: ListViewModel = viewModel(
         key = when (source) { Source.Home -> "home"; Source.Ongoing -> "ongoing"; else -> "completed" },
         factory = viewModelFactory { initializer { ListViewModel(source) } },
@@ -92,13 +92,13 @@ fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (S
     when {
         vm.loading -> com.nusanime.app.ui.LoadingScreen()
         vm.error != null && vm.items.isEmpty() -> com.nusanime.app.ui.ErrorScreen(vm.error!!) { vm.load(initial = true) }
-        else -> PullToRefreshList(vm, source, onOpenDetail, onOpenEpisode)
+        else -> PullToRefreshList(vm, source, onOpenDetail, onOpenEpisode, onOpen18)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit) {
+private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit, onOpen18: (String) -> Unit = {}) {
     val ctx18 = androidx.compose.ui.platform.LocalContext.current
     var adultOn by remember { mutableStateOf(com.nusanime.app.data.api.AdultPrefs.enabled(ctx18)) }
     var javItems by remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
@@ -145,11 +145,7 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
                         javItems.take(10).forEach { j ->
                             val link = "https://nekopoi.care/" + (j.animeId?.removePrefix("jav:") ?: "") + "/"
-                            androidx.compose.material3.Card(onClick = {
-                                try {
-                                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(link)).also { ctx18.startActivity(it) }
-                                } catch (_: Exception) {}
-                            }) {
+                            androidx.compose.material3.Card(onClick = { onOpen18(link) }) {
                                 Column(Modifier.width(110.dp)) {
                                     coil.compose.AsyncImage(
                                         model = j.poster,
