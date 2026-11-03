@@ -227,13 +227,13 @@ fun App(openEpisode: String? = null) {
                     Source.Home,
                     { nav.navigate(Routes.detail(it)) },
                     { nav.navigate(Routes.player(it)) },
-                ) { slug ->
-                    if (slug == "__GENRE__") nav.navigate(Routes.JAVGENRE)
-                    else nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8"))
-                },
-                onOpenMovie = { slug -> nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
-            )
-        }
+                    onOpen18 = { slug ->
+                        if (slug == "__GENRE__") nav.navigate(Routes.JAVGENRE)
+                        else nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8"))
+                    },
+                    onOpenMovie = { slug -> nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                )
+            }
             composable(
                 Routes.MOVIE,
                 arguments = listOf(navArgument("slug") { type = NavType.StringType }),
