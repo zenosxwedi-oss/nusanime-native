@@ -39,7 +39,6 @@ fun SettingsScreen() {
         }
 
         Spacer(Modifier.height(8.dp))
-}
 
         if (upState.ready != null) {
             Button(onClick = { UpdateState.install(ctx) }) { Text("Install update sekarang") }
