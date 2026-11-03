@@ -114,9 +114,9 @@ object JavSource {
         val h = get("\$base/\$slug/", referer = base) ?: return@withContext emptyList()
         val out = LinkedHashMap<String, JavServer>()
         IFRAME_RE.findAll(h).forEach { m ->
-            val u = m.groupValues[1]
-            if (u.contains("nekovid") || u.contains("embed") && !u.contains("arenajav") && !u.contains(base)) {
-                val host = try { java.net.URI(u).host ?: u } catch (_: Exception) { u }
+            val u = m.groupValues[1].replace("\\\\", "")
+            if (u.startsWith("http") && !u.contains("wp-json") && !u.contains("oembed") &&
+                !u.contains("arenajav") && !u.contains(base) && u.contains("embed")) {
                 if (!out.containsKey(u)) out[u] = JavServer("Server \${out.size + 1}", u)
             }
         }
@@ -137,12 +137,17 @@ object JavSource {
     suspend fun resolveM3u8(embedUrl: String): String? = withContext(Dispatchers.IO) {
         val h = get(embedUrl, referer = "https://javsubindo.com/") ?: return@withContext null
         M3U8_RE.find(h)?.groupValues?.get(1) ?: run {
-            // try unpack eval(function(p,a,c,k,e,d)...)
-            val m = Regex("\\}\\('(.*)',(\\d+),(\\d+),'([^']*)'\\.split\\('\\|'\\)").find(h)
+            // proper dean Edwards unpacker: radix-aware token replacement
+            val m = Regex("\\}\\('(.*)',(\\d+),(\\d+),'([^']*)'\\.split\\('\\|'\\)", RegexOption.DOT_MATCHES_ALL).find(h)
             if (m != null) {
-                val p = m.groupValues[1]; val k = m.groupValues[4].split("|")
-                val out = Regex("\\d+").replace(p) { mm ->
-                    val n = mm.value.toInt(); if (n < k.size) k[n] else mm.value
+                val p = m.groupValues[1]
+                val a = m.groupValues[2].toInt()
+                val k = m.groupValues[4].split("|")
+                val out = Regex("[0-9a-zA-Z]+").replace(p) { mm ->
+                    try {
+                        val n = Integer.parseInt(mm.value, a)
+                        if (n < k.size && k[n].isNotEmpty()) k[n] else mm.value
+                    } catch (_: Exception) { mm.value }
                 }
                 M3U8_RE.find(out)?.groupValues?.get(1)
             } else null
