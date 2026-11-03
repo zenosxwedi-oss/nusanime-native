@@ -44,7 +44,7 @@ object JavSource {
     private val TAG_RE = Regex(""""https?://[a-z0-9.-]+/(?:tag|genre|categories)/([a-z0-9-]{3,30})/"""")
     private val TITLE_RE = Regex(""""([^"]{10,120})"""")
     private val IFRAME_RE = Regex(""""(https?://[^"]*(?:embed|iframe|player)[^"]*)"""")
-    private val M3U8_RE = Regex("(https?://[^\s\\"']+\\.m3u8[^\\s\\\"']*)")
+    private val M3U8_RE = Regex(""""(https?://[^\s"']+\.m3u8[^\s"']*)""""")
 
     private fun parse(html: String, siteIdx: Int): List<AnimeItem> {
         val site = SITES[siteIdx]
@@ -119,10 +119,10 @@ object JavSource {
             }
         }
         // arenajav data-em base64 embeds
-        Regex("data-em="([A-Za-z0-9+/=]{40,})""").findAll(h).forEach { m ->
+        Regex(""""data-em="([A-Za-z0-9+/=]{40,})""""").findAll(h).forEach { m ->
             try {
                 val dec = String(android.util.Base64.decode(m.groupValues[1], android.util.Base64.DEFAULT))
-                Regex("src=\"([^\"]+)\"").find(dec)?.let { s ->
+                Regex(""""src="([^"]+)""""").find(dec)?.let { s ->
                     val u = s.groupValues[1]
                     if (!out.containsKey(u)) out[u] = JavServer("Server \${out.size + 1}", u)
                 }
