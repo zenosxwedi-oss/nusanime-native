@@ -1,80 +1,149 @@
 package com.nusanime.app.ui.screens
 
 import android.annotation.SuppressLint
+import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
+import kotlinx.coroutines.withContext
 
 /**
- * In-app 18+ watch: extracts iframe embeds from the javsubindo post page and
- * plays them in a WebView (no app ads on 18+ content).
- * route param = slug.
+ * In-app 18+ watch. Primary: native ExoPlayer with direct m3u8 resolved from the
+ * embed (no embed ads). Fallback: WebView with referer + Chrome mobile UA.
+ * Multi-server chips. route param = slug.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun JavDetailScreen(slug: String, onBack: () -> Unit) {
-    var embeds by remember(slug) { mutableStateOf<List<String>>(emptyList()) }
-    var current by remember(slug) { mutableStateOf<String?>(null) }
+    val ctx = LocalContext.current
+    var embeds by remember(slug) { mutableStateOf<List<com.nusanime.app.data.api.JavSource.JavServer>>(emptyList()) }
+    var current by remember(slug) { mutableStateOf<com.nusanime.app.data.api.JavSource.JavServer?>(null) }
+    var m3u8 by remember(slug) { mutableStateOf<String?>(null) }
     var loading by remember(slug) { mutableStateOf(true) }
+    var resolving by remember(slug) { mutableStateOf(true) }
 
     LaunchedEffect(slug) {
-        val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val list = withContext(kotlinx.coroutines.Dispatchers.IO) {
             com.nusanime.app.data.api.JavSource.embeds(slug)
         }
         embeds = list
         current = list.firstOrNull()
         loading = false
+        // resolve direct stream for current server (native => skip embed ads)
+        current?.let { c ->
+            val s = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.nusanime.app.data.api.JavSource.resolveM3u8(c.url)
+            }
+            if (s != null) m3u8 = s
+            resolving = false
+        } ?: run { resolving = false }
+    }
+
+    // Re-resolve when switching server
+    LaunchedEffect(current?.url) {
+        val c = current ?: return@LaunchedEffect
+        if (m3u8 == null || embeds.any { it.url == c.url && it != embeds.firstOrNull() }) {
+            resolving = true
+            m3u8 = null
+            val s = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.nusanime.app.data.api.JavSource.resolveM3u8(c.url)
+            }
+            m3u8 = s
+            resolving = false
+        }
     }
 
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("← Kembali") }
             Text("18+ · Konten Dewasa", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if (loading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }
-        } else if (current == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                Text("Server tidak tersedia — coba lagi nanti", textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+
+        when {
+            loading || resolving -> {
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }
-        } else {
-            AndroidView(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.mediaPlaybackRequiresUserGesture = false
-                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        settings.userAgentString = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"
-                        settings.loadWithOverviewMode = true
-                        settings.useWideViewPort = true
-                        setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
-                        webChromeClient = WebChromeClient()
-                        webViewClient = WebViewClient()
-                        loadUrl(current!!, mapOf("Referer" to "https://javsubindo.com/"))
+            m3u8 != null -> {
+                // NATIVE ExoPlayer — HLS, no embed, no embed ads, hardware codec per device
+                val player = remember(m3u8) {
+                    ExoPlayer.Builder(ctx).build().apply {
+                        setMediaItem(MediaItem.Builder()
+                            .setUri(m3u8)
+                            .setMimeType(MimeTypes.APPLICATION_M3U8)
+                            .build())
+                        playWhenReady = true
+                        prepare()
                     }
-                },
-                update = { wv -> if (wv.url != current) wv.loadUrl(current!!, mapOf("Referer" to "https://javsubindo.com/")) },
-            )
-            if (embeds.size > 1) {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    embeds.forEachIndexed { idx, e ->
-                        FilterChip(
-                            selected = current == e,
-                            onClick = { current = e },
-                            label = { Text("Server ${idx + 1}") },
-                        )
-                    }
+                }
+                DisposableEffect(m3u8) { onDispose { player.release() } }
+                AndroidView(
+                    modifier = Modifier.fillMaxWidth().weight(1f).background(androidx.compose.ui.graphics.Color.Black),
+                    factory = { p -> PlayerView(p).apply { this.player = player; useController = true } },
+                )
+            }
+            current != null -> {
+                // FALLBACK WebView
+                AndroidView(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    factory = { c ->
+                        WebView(c).apply {
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            settings.mediaPlaybackRequiresUserGesture = false
+                            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                            settings.userAgentString = com.nusanime.app.data.api.JavSource.UA
+                            settings.loadWithOverviewMode = true
+                            settings.useWideViewPort = true
+                            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                            webChromeClient = WebChromeClient()
+                            webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                                    // block popunder/redirect ads — keep playback in-frame
+                                    return url != null && !url.contains("nekovid") && !url.contains("embed")
+                                }
+                            }
+                            layoutParams = FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                            loadUrl(current!!.url, mapOf("Referer" to "https://javsubindo.com/"))
+                        }
+                    },
+                    update = { wv -> if (wv.url != current!!.url) wv.loadUrl(current!!.url, mapOf("Referer" to "https://javsubindo.com/")) },
+                )
+            }
+            else -> {
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    Text("Server tidak tersedia — coba server lain atau lagi nanti", textAlign = TextAlign.Center)
+                }
+            }
+        }
+
+        if (embeds.size > 1) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                embeds.forEachIndexed { idx, e ->
+                    FilterChip(
+                        selected = current == e,
+                        onClick = { current = e },
+                        label = { Text("Server ${idx + 1}") },
+                    )
                 }
             }
         }

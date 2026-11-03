@@ -146,7 +146,7 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
                 }
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
-                        javItems.take(10).forEach { j ->
+                        javItems.take(30).forEach { j ->
                             val link = j.animeId?.removePrefix("jav:") ?: ""
                             androidx.compose.material3.Card(onClick = { onOpen18(link) }) {
                                 Column(Modifier.width(110.dp)) {
@@ -157,6 +157,28 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                     )
                                     Text(j.title ?: "", maxLines = 2, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
+                                }
+                            }
+                        }
+                    }
+                    // Muat lebih banyak: tampilkan 30 pertama; sisanya grid penuh di bawah
+                    val rest = javItems.drop(30)
+                    if (rest.isNotEmpty()) {
+                        rest.chunked(3).forEach { rowItems ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
+                                rowItems.forEach { j ->
+                                    val link = j.animeId?.removePrefix("jav:") ?: ""
+                                    androidx.compose.material3.Card(onClick = { onOpen18(link) }, modifier = Modifier.weight(1f)) {
+                                        Column {
+                                            coil.compose.AsyncImage(
+                                                model = j.poster,
+                                                contentDescription = j.title,
+                                                modifier = Modifier.fillMaxWidth().height(150.dp),
+                                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                            )
+                                            Text(j.title ?: "", maxLines = 2, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
+                                        }
+                                    }
                                 }
                             }
                         }

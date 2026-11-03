@@ -20,6 +20,8 @@ data class AnimeItem(
     @SerializedName("status") val statusField: String?,
     @SerializedName("estimation") val estimation: String?,
     @SerializedName("genreList") val genreList: List<Genre>?,
+    /** For 18+ items: which jav site the item came from (index into JavSource.SITES). */
+    val siteIdx: Int? = null,
 ) {
     /** score can be a String ("★ 8.7") or an object {value, users}. */
     fun scoreText(): String = when (score) {
