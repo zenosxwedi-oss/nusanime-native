@@ -57,4 +57,45 @@ object MovieSource {
         try { gson.fromJson(apiGet("/movie/post?slug=" + android.net.Uri.encode(slug)), MServers::class.java).servers }
         catch (_: Exception) { emptyList() }
     }
+
+    // ===== MovieBox provider =====
+    data class MbItem(val title: String = "", val subjectId: String = "", val poster: String = "", val year: String = "")
+    data class MbPlay(val mpd: String? = null, val cookie: String? = null, val resolution: Int = 0)
+
+    suspend fun mbSearch(q: String): List<AnimeItem> = withContext(Dispatchers.IO) {
+        try {
+            val json = apiGet("/movie/mb/search?q=" + java.net.URLEncoder.encode(q, "UTF-8")) ?: return@withContext emptyList()
+            val items: Array<MbItem> = gson.fromJson(json, Array<MbItem>::class.java) ?: return@withContext emptyList()
+            items.filter { it.subjectId.isNotEmpty() }.map {
+                AnimeItem(
+                    title = it.title,
+                    poster = it.poster,
+                    animeId = "mb:" + it.subjectId,
+                    episodeId = null,
+                    episodes = null,
+                    releasedOn = it.year.ifEmpty { null },
+                    type = "movie",
+                    score = null,
+                    statusField = null,
+                    estimation = null,
+                    genreList = null,
+                    siteIdx = null
+                )
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    suspend fun mbPost(sid: String): MServers = withContext(Dispatchers.IO) {
+        try {
+            val json = apiGet("/movie/mb/post?sid=" + sid) ?: return@withContext MServers(emptyList())
+            gson.fromJson(json, MServers::class.java) ?: MServers(emptyList())
+        } catch (_: Exception) { MServers(emptyList()) }
+    }
+
+    suspend fun mbPlay(sid: String): MbPlay? = withContext(Dispatchers.IO) {
+        try {
+            val json = apiGet("/movie/mb/play?sid=" + sid) ?: return@withContext null
+            gson.fromJson(json, MbPlay::class.java)
+        } catch (_: Exception) { null }
+    }
 }

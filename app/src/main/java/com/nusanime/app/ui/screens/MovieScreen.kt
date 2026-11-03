@@ -27,7 +27,11 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
 
     LaunchedEffect(slug) {
         val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            com.nusanime.app.data.api.MovieSource.embeds(slug)
+            if (slug.startsWith("mb:")) {
+                com.nusanime.app.data.api.MovieSource.mbPost(slug.removePrefix("mb:")).servers
+            } else {
+                com.nusanime.app.data.api.MovieSource.embeds(slug)
+            }
         }
         servers = list
         current = list.firstOrNull()
@@ -44,6 +48,39 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
         } else if (current == null) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 Text("Server tidak tersedia", textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+        } else if (current!!.url.startsWith("mb:")) {
+            // NATIVE MovieBox — DASH 1080p with signCookie
+            var mbp by remember(current?.url) { mutableStateOf<com.nusanime.app.data.api.MovieSource.MbPlay?>(null) }
+            LaunchedEffect(current?.url) {
+                mbp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    com.nusanime.app.data.api.MovieSource.mbPlay(current!!.url.removePrefix("mb:"))
+                }
+            }
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                val mp = mbp
+                if (mp == null || mp.mpd == null) CircularProgressIndicator()
+                else {
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    val player = remember(mp.mpd) {
+                        val cookie = mp.cookie ?: ""
+                        val dsFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+                            .setUserAgent("ExoPlayerLib/2.18.7")
+                            .setDefaultRequestProperty("Cookie", cookie)
+                        androidx.media3.exoplayer.ExoPlayer.Builder(ctx).build().apply {
+                            setMediaSource(androidx.media3.exoplayer.dash.DashMediaSource.Factory(dsFactory)
+                                .createMediaSource(androidx.media3.common.MediaItem.Builder().setUri(mp.mpd).build()))
+                            playWhenReady = true; prepare()
+                        }
+                    }
+                    DisposableEffect(mp.mpd) { onDispose { player.release() } }
+                    AndroidView(
+                        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black),
+                        factory = { p ->
+                            androidx.media3.ui.PlayerView(p).apply { this.player = player; useController = true }
+                        },
+                    )
+                }
             }
         } else if (current!!.url.startsWith("movieplay:")) {
             // NATIVE HD — server-resolved vidsrc m3u8 via our relay
