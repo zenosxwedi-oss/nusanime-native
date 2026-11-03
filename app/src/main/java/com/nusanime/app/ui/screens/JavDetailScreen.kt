@@ -97,7 +97,19 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                 DisposableEffect(m3u8) { onDispose { player.release() } }
                 AndroidView(
                     modifier = Modifier.fillMaxWidth().weight(1f).background(androidx.compose.ui.graphics.Color.Black),
-                    factory = { p -> PlayerView(p).apply { this.player = player; useController = true } },
+                    factory = { p ->
+                        PlayerView(p).apply {
+                            this.player = player
+                            useController = true
+                            controllerShowTimeoutMs = 4000
+                            setFullscreenButtonClickListener { isFs ->
+                                // toggle landscape fullscreen
+                                val act = p.context as? android.app.Activity ?: return@setFullscreenButtonClickListener
+                                if (isFs) act.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                                else act.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                            }
+                        }
+                    },
                 )
             }
             current != null -> {
