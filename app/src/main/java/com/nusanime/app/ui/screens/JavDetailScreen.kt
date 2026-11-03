@@ -110,7 +110,7 @@ fun JavDetailScreen(slug: String, onBack: () -> Unit) {
                             settings.domStorageEnabled = true
                             settings.mediaPlaybackRequiresUserGesture = false
                             settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                            settings.userAgentString = com.nusanime.app.data.api.JavSource.UA
+                            settings.userAgentString = com.nusanime.app.data.api.JAV_UA
                             settings.loadWithOverviewMode = true
                             settings.useWideViewPort = true
                             setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
