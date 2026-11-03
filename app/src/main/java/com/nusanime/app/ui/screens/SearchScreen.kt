@@ -40,6 +40,7 @@ class SearchViewModel : ViewModel() {
     }
 
     var javResults by mutableStateOf<List<AnimeItem>>(emptyList())
+    var movieResults by mutableStateOf<List<AnimeItem>>(emptyList())
 
     fun search(q: String) {
         viewModelScope.launch {
@@ -53,6 +54,8 @@ class SearchViewModel : ViewModel() {
                 "Gagal mencari: ${e.message ?: "kesalahan jaringan"}"
             }
             loading = false
+            // Movie search (lk21 via server, always on)
+            try { movieResults = com.nusanime.app.data.api.MovieSource.search(q.trim()) } catch (_: Exception) { movieResults = emptyList() }
             // 18+ search (parallel, non-blocking, only if enabled)
             if (com.nusanime.app.data.api.AdultPrefs.enabled(com.nusanime.app.MainApplication.instance)) {
                 try { javResults = com.nusanime.app.data.api.JavSource.search(q.trim()) } catch (_: Exception) { javResults = emptyList() }
@@ -62,7 +65,7 @@ class SearchViewModel : ViewModel() {
 }
 
 @Composable
-fun SearchScreen(onOpenDetail: (String) -> Unit, onOpen18: (String) -> Unit = {}) {
+fun SearchScreen(onOpenDetail: (String) -> Unit, onOpen18: (String) -> Unit = {}, onOpenMovie: (String) -> Unit = {}) {
     val vm: SearchViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     Column(Modifier.fillMaxSize()) {
@@ -91,6 +94,11 @@ fun SearchScreen(onOpenDetail: (String) -> Unit, onOpen18: (String) -> Unit = {}
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                if (vm.movieResults.isNotEmpty()) {
+                    item(span = { GridItemSpan(3) }) {
+                        Text("🎬 Movie — lk21", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    }
+                }
                 if (vm.javResults.isNotEmpty()) {
                     item(span = { GridItemSpan(3) }) {
                         Text("🔴 18+ — Konten Dewasa", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFFE53935))
@@ -101,6 +109,9 @@ fun SearchScreen(onOpenDetail: (String) -> Unit, onOpen18: (String) -> Unit = {}
                 }
                 items(vm.javResults) { j ->
                     AnimeCard(j) { j.animeId?.removePrefix("jav:")?.let(onOpen18) }
+                }
+                items(vm.movieResults) { m ->
+                    AnimeCard(m) { m.animeId?.removePrefix("movie:")?.let(onOpenMovie) }
                 }
             }
         }

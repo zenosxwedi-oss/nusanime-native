@@ -84,7 +84,7 @@ class ListViewModel(private val source: Source) : ViewModel() {
 }
 
 @Composable
-fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit = {}, onOpen18: (String) -> Unit = {}) {
+fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit = {}, onOpen18: (String) -> Unit = {}, onOpenMovie: (String) -> Unit = {}) {
     val vm: ListViewModel = viewModel(
         key = when (source) { Source.Home -> "home"; Source.Ongoing -> "ongoing"; else -> "completed" },
         factory = viewModelFactory { initializer { ListViewModel(source) } },
@@ -93,19 +93,23 @@ fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (S
     when {
         vm.loading -> com.nusanime.app.ui.LoadingScreen()
         vm.error != null && vm.items.isEmpty() -> com.nusanime.app.ui.ErrorScreen(vm.error!!) { vm.load(initial = true) }
-        else -> PullToRefreshList(vm, source, onOpenDetail, onOpenEpisode, onOpen18)
+        else -> PullToRefreshList(vm, source, onOpenDetail, onOpenEpisode, onOpen18, onOpenMovie)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit, onOpen18: (String) -> Unit = {}) {
+private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit, onOpen18: (String) -> Unit = {}, onOpenMovie: (String) -> Unit = {}) {
     val ctx18 = androidx.compose.ui.platform.LocalContext.current
     var adultOn by remember { mutableStateOf(com.nusanime.app.data.api.AdultPrefs.enabled(ctx18)) }
     var javItems by remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
+    var movieItems by remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
     LaunchedEffect(adultOn) {
         if (adultOn && source == Source.Home && javItems.isEmpty()) {
             javItems = com.nusanime.app.data.api.JavSource.latest()
+        }
+        if (source == Source.Home && movieItems.isEmpty()) {
+            movieItems = com.nusanime.app.data.api.MovieSource.latest()
         }
     }
     PullToRefreshBox(
@@ -133,6 +137,32 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
             }
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
                 com.nusanime.app.ui.AdMobBanner()
+            }
+            if (source == Source.Home && movieItems.isNotEmpty()) {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp, bottom = 8.dp)) {
+                            Text("🎬 Movie", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                            Spacer(Modifier.weight(1f))
+                            Text("lk21", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
+                            movieItems.take(20).forEach { m ->
+                                androidx.compose.material3.Card(onClick = { m.animeId?.removePrefix("movie:")?.let(onOpenMovie) }) {
+                                    Column(Modifier.width(100.dp)) {
+                                        coil.compose.AsyncImage(
+                                            model = m.poster,
+                                            contentDescription = m.title,
+                                            modifier = Modifier.fillMaxWidth().height(145.dp),
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                        )
+                                        Text(m.title ?: "", maxLines = 2, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(5.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
             if (adultOn && source == Source.Home && javItems.isNotEmpty()) {
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {

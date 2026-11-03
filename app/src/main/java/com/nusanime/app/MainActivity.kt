@@ -60,6 +60,7 @@ object Routes {
     const val DETAIL = "detail/{animeId}"
     const val JAV = "jav/{slug}"
     const val JAVGENRE = "javgenre"
+    const val MOVIE = "movie/{slug}"
     const val PLAYER = "player/{episodeId}"
     fun detail(animeId: String) = "detail/$animeId"
     fun player(episodeId: String) = "player/$episodeId"
@@ -229,7 +230,15 @@ fun App(openEpisode: String? = null) {
                 ) { slug ->
                     if (slug == "__GENRE__") nav.navigate(Routes.JAVGENRE)
                     else nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8"))
-                }
+                },
+                onOpenMovie = { slug -> nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+            )
+            composable(
+                Routes.MOVIE,
+                arguments = listOf(navArgument("slug") { type = NavType.StringType }),
+            ) { be ->
+                val slug = java.net.URLDecoder.decode(be.arguments?.getString("slug") ?: "", "UTF-8")
+                com.nusanime.app.ui.screens.MovieScreen(slug) { nav.popBackStack() }
             }
             composable(Routes.JAVGENRE) {
                 com.nusanime.app.ui.screens.JavGenreScreen(
@@ -249,9 +258,11 @@ fun App(openEpisode: String? = null) {
             composable(Routes.SCHEDULE) { ScheduleScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.GENRE) { com.nusanime.app.ui.screens.GenreScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.SEARCH) {
-                SearchScreen({ nav.navigate(Routes.detail(it)) }) { slug ->
-                    nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8"))
-                }
+                SearchScreen(
+                    onOpenDetail = { nav.navigate(Routes.detail(it)) },
+                    onOpen18 = { slug -> nav.navigate("jav/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                    onOpenMovie = { slug -> nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                )
             }
             composable(Routes.BOOKMARKS) { BookmarksScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.HISTORY) { HistoryScreen { nav.navigate(Routes.player(it)) } }
