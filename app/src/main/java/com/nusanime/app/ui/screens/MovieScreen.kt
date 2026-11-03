@@ -81,6 +81,7 @@ fun MovieScreen(slug: String, onBack: () -> Unit) {
             )
             }
             }
+            }
         }
         if (servers.size > 1) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
