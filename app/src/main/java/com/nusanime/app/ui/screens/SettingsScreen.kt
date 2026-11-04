@@ -39,6 +39,29 @@ fun SettingsScreen() {
         }
 
         Spacer(Modifier.height(8.dp))
+        Text("Pembaruan Aplikasi", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Button(
+            onClick = {
+                checking = true; status = null; remote = null
+                scope.launch {
+                    val info = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        try { SelfUpdater.latest(ctx) } catch (_: Exception) { null }
+                    }
+                    checking = false
+                    val cur = SelfUpdater.currentVersionName(ctx)
+                    if (info == null) status = "Gagal cek update"
+                    else if (!SelfUpdater.isNewer(info.versionName, cur)) status = "Sudah versi terbaru (v$cur)"
+                    else {
+                        remote = info
+                        UpdateState.start(ctx, info)
+                    }
+                }
+            },
+            enabled = !checking && !upState.active,
+        ) { Text(if (upState.active) "Mengunduh update…" else "Cek update & unduh") }
+        remote?.let { info ->
+            Text("v${info.versionName} tersedia", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
 
         if (upState.ready != null) {
             Button(onClick = { UpdateState.install(ctx) }) { Text("Install update sekarang") }

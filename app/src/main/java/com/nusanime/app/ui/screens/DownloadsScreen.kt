@@ -31,19 +31,30 @@ fun DownloadsScreen() {
     val ctx = LocalContext.current
     val db = remember { AppDatabase.get(ctx) }
     val items by db.downloadDao().all().collectAsState(initial = emptyList())
+    val upState by com.nusanime.app.update.UpdateState.st
 
     if (items.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Belum ada unduhan.\nBuka episode lalu ketuk tombol ⬇ untuk mengunduh.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.fillMaxSize()) {
+            if (upState.active || upState.ready != null) {
+                UpdateCard()
+            }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Belum ada unduhan.\nBuka episode lalu ketuk tombol ⬇ untuk mengunduh.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         return
     }
+    if (upState.active || upState.ready != null) { /* handled below via header injection */ }
 
     LazyColumn(
+
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        if (upState.active || upState.ready != null) {
+            item { UpdateCard() }
+        }
         items(items, key = { it.episodeId }) { entry ->
             DownloadRow(entry)
         }
@@ -115,6 +126,32 @@ private fun DownloadRow(entry: DownloadEntry) {
             IconButton(onClick = { DownloadManager.delete(ctx, entry) }) {
                 Icon(Icons.Default.Delete, "Hapus", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+    }
+}
+
+
+@Composable
+private fun UpdateCard() {
+    val ctx = LocalContext.current
+    val upState by com.nusanime.app.update.UpdateState.st
+    Card(Modifier.fillMaxWidth().padding(12.dp)) {
+        Column(Modifier.padding(12.dp)) {
+            Text("Pembaruan aplikasi", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            if (upState.active) {
+                LinearProgressIndicator(progress = { upState.progress }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                Text(
+                    if (upState.progress > 0f) "${(upState.progress * 100).toInt()}% — boleh nonton / keluar app, unduhan tetap jalan" else "Menyiapkan…",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            } else if (upState.ready != null) {
+                Button(onClick = { com.nusanime.app.update.UpdateState.install(ctx) }, modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Install update sekarang")
+                }
+            }
+            upState.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp)) }
         }
     }
 }
