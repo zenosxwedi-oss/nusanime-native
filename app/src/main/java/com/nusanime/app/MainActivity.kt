@@ -261,8 +261,8 @@ fun App(openEpisode: String? = null) {
                 val slug = java.net.URLDecoder.decode(be.arguments?.getString("slug") ?: "", "UTF-8")
                 com.nusanime.app.ui.screens.MissAvScreen(slug) { nav.popBackStack() }
             }
-            composable(Routes.ONGOING) { ListScreen(Source.Ongoing, { nav.navigate(Routes.detail(it)) }) { nav.navigate(Routes.player(it)) } }
-            composable(Routes.COMPLETED) { ListScreen(Source.Completed, { nav.navigate(Routes.detail(it)) }) }
+            composable(Routes.ONGOING) { ListScreen(Source.Ongoing, onOpenDetail = { nav.navigate(Routes.detail(it)) }, onOpenEpisode = { nav.navigate(Routes.player(it)) }) }
+            composable(Routes.COMPLETED) { ListScreen(Source.Completed, onOpenDetail = { nav.navigate(Routes.detail(it)) }) }
             composable(Routes.SCHEDULE) { ScheduleScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.GENRE) { com.nusanime.app.ui.screens.GenreScreen { nav.navigate(Routes.detail(it)) } }
             composable(Routes.SEARCH) {
