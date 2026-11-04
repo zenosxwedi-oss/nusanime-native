@@ -26,6 +26,7 @@ object MovieSource {
         val genres: List<String> = emptyList(), val imdbId: String? = null,
     )
     data class MPlay(val m3u8: String? = null)
+    data class MSubs(val srt: String? = null)
 
     private fun apiGet(path: String): String? = try {
         val conn = URL(API + path).openConnection() as HttpURLConnection
@@ -74,6 +75,14 @@ object MovieSource {
             val r = gson.fromJson(apiGet("/movie/play?imdb=" + java.net.URLEncoder.encode(imdb, "UTF-8")), MPlay::class.java)
             val rel = r?.m3u8 ?: return@withContext null
             if (rel.startsWith("/")) API + rel else rel
+        } catch (_: Exception) { null }
+    }
+
+    /** Cari subtitle Indonesia (SRT) untuk film via IMDb id; return URL absolut atau null. */
+    suspend fun subs(imdbId: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val r = gson.fromJson(apiGet("/movie2/subs?imdb=" + java.net.URLEncoder.encode(imdbId, "UTF-8")), MSubs::class.java)
+            r?.srt?.let { if (it.startsWith("/")) API + it else it }
         } catch (_: Exception) { null }
     }
 
