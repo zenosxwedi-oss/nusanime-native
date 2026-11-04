@@ -14,12 +14,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.lazy.grid.ExperimentalFoundationApi
 
 private val MV_GENRES = listOf("New", "Today Hot", "Weekly Hot", "Monthly Hot", "Chinese Subtitle", "Uncensored Leak", "Release")
 
 /** MissAV browser — chips kategori/genre + grid + muat otomatis. slug item dibungkus "mv:" saat dibuka. */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MissAvListScreen(onOpenMovie: (String) -> Unit, onBack: () -> Unit) {
     var tab by remember { mutableStateOf("New") }
