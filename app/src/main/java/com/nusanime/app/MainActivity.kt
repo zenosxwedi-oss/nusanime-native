@@ -230,12 +230,14 @@ fun App(openEpisode: String? = null) {
                     Source.Home,
                     { nav.navigate(Routes.detail(it)) },
                     { nav.navigate(Routes.player(it)) },
-                    onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MVISSLIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                    onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MOVIELIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                    onOpenMissAv = { nav.navigate(Routes.MVISSLIST) },
                 )
             }
             composable(Routes.MOVIELIST) {
                 com.nusanime.app.ui.screens.MovieListScreen(
-                    onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MVISSLIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                    onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MOVIELIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                    onOpenMissAv = { nav.navigate(Routes.MVISSLIST) },
                     onBack = { nav.popBackStack() },
                 )
             }

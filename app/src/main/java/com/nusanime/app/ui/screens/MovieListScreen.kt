@@ -17,7 +17,7 @@ private val MB_GENRES = listOf("Populer", "Action", "Comedy", "Horror", "Romance
 
 /** Semua Movie (MovieBox) — grid + genre chips + muat otomatis. */
 @Composable
-fun MovieListScreen(onOpenMovie: (String) -> Unit, onBack: () -> Unit) {
+fun MovieListScreen(onOpenMovie: (String) -> Unit, onBack: () -> Unit, onOpenMissAv: () -> Unit = {}) {
     var genre by remember { mutableStateOf("Populer") }
     var items by remember(genre) { mutableStateOf<List<com.nusanime.app.data.api.MovieSource.MItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -40,6 +40,10 @@ fun MovieListScreen(onOpenMovie: (String) -> Unit, onBack: () -> Unit) {
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("← Kembali") }
             Text("🎬 Movie — Semua", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.weight(1f))
+            Button(onClick = onOpenMissAv, colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF7C3AED))) {
+                Text("MissAV", style = MaterialTheme.typography.labelSmall)
+            }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MB_GENRES.forEach { g ->
