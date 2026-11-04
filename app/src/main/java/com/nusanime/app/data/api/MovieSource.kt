@@ -7,7 +7,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Movie Bar — katalog TMDB via javapi /movie2/*, play via rantai vidsrc
+ * Movie Bar — katalog TMDB via javapi /movie2/, play via rantai vidsrc
  * server-side (/movie/play?imdb=). Tanpa 18+, tanpa MovieBox, tanpa MissAV.
  */
 object MovieSource {
