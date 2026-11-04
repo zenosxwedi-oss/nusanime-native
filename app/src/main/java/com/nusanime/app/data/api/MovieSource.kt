@@ -128,4 +128,42 @@ object MovieSource {
             mb.filter { it.subjectId.isNotEmpty() }.map { MItem(slug = "mb_" + it.subjectId, title = it.title, poster = it.poster, site = 0) }
         } catch (_: Exception) { emptyList() }
     }
+
+    // ===== MissAV provider (javapi /missav/*) =====
+    data class MvListRes(val page: Int = 1, val items: List<MvItem> = emptyList(), val next: Int? = null)
+    data class MvItem(val slug: String = "", val url: String = "", val poster: String = "", val title: String = "")
+    data class MvGenre(val name: String = "", val slug: String = "")
+    data class MvPost(
+        val slug: String = "", val title: String = "", val poster: String? = null,
+        val date: String? = null, val genres: List<String> = emptyList(),
+        val actresses: List<String> = emptyList(), val uncensored: Boolean = false,
+        val m3u8: String? = null,
+    )
+
+    suspend fun mvHome(page: Int = 1): MvListRes = withContext(Dispatchers.IO) {
+        try { gson.fromJson(apiGet("/missav/home?page=$page"), MvListRes::class.java) ?: MvListRes() }
+        catch (_: Exception) { MvListRes() }
+    }
+
+    suspend fun mvList(path: String, page: Int = 1): MvListRes = withContext(Dispatchers.IO) {
+        try {
+            gson.fromJson(apiGet("/missav/list?path=" + java.net.URLEncoder.encode(path, "UTF-8") + "&page=$page"), MvListRes::class.java) ?: MvListRes()
+        } catch (_: Exception) { MvListRes() }
+    }
+
+    suspend fun mvGenres(): List<MvGenre> = withContext(Dispatchers.IO) {
+        try { gson.fromJson(apiGet("/missav/genre"), Array<MvGenre>::class.java)?.toList() ?: emptyList() }
+        catch (_: Exception) { emptyList() }
+    }
+
+    suspend fun mvSearch(q: String, page: Int = 1): MvListRes = withContext(Dispatchers.IO) {
+        try {
+            gson.fromJson(apiGet("/missav/search?q=" + java.net.URLEncoder.encode(q, "UTF-8") + "&page=$page"), MvListRes::class.java) ?: MvListRes()
+        } catch (_: Exception) { MvListRes() }
+    }
+
+    suspend fun mvPost(slug: String): MvPost? = withContext(Dispatchers.IO) {
+        try { gson.fromJson(apiGet("/missav/post?slug=" + java.net.URLEncoder.encode(slug, "UTF-8")), MvPost::class.java) }
+        catch (_: Exception) { null }
+    }
 }
