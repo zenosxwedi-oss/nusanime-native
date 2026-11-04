@@ -84,7 +84,7 @@ class ListViewModel(private val source: Source) : ViewModel() {
 }
 
 @Composable
-fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit = {}, onOpen18: (String) -> Unit = {}, onOpenMovie: (String) -> Unit = {}, onOpenMissAv: () -> Unit = {}) {
+fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit = {}, onOpen18: (String) -> Unit = {}, onOpenMovie: (String) -> Unit = {},) {
     val vm: ListViewModel = viewModel(
         key = when (source) { Source.Home -> "home"; Source.Ongoing -> "ongoing"; else -> "completed" },
         factory = viewModelFactory { initializer { ListViewModel(source) } },
@@ -93,17 +93,17 @@ fun ListScreen(source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (S
     when {
         vm.loading -> com.nusanime.app.ui.LoadingScreen()
         vm.error != null && vm.items.isEmpty() -> com.nusanime.app.ui.ErrorScreen(vm.error!!) { vm.load(initial = true) }
-        else -> PullToRefreshList(vm, source, onOpenDetail, onOpenEpisode, onOpen18, onOpenMovie, onOpenMissAv)
+        else -> PullToRefreshList(vm, source, onOpenDetail, onOpenEpisode, onOpen18, onOpenMovie)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit, onOpen18: (String) -> Unit = {}, onOpenMovie: (String) -> Unit = {}, onOpenMissAv: () -> Unit = {}) {
+private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (String) -> Unit, onOpenEpisode: (String) -> Unit, onOpen18: (String) -> Unit = {}, onOpenMovie: (String) -> Unit = {},) {
     var movieItems by remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
     LaunchedEffect(Unit) {
         if (source == Source.Home && movieItems.isEmpty()) {
-            movieItems = com.nusanime.app.data.api.MovieSource.latest()
+            movieItems = com.nusanime.app.data.api.MovieSource.toItems(com.nusanime.app.data.api.MovieSource.list("popular", 1))
         }
     }
     PullToRefreshBox(
@@ -159,13 +159,6 @@ private fun PullToRefreshList(vm: ListViewModel, source: Source, onOpenDetail: (
                 }
             }
             if (source == Source.Home) {
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-                    Button(
-                        onClick = onOpenMissAv,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF7C3AED)),
-                    ) { Text("🔞 MissAV — JAV HD", style = MaterialTheme.typography.labelLarge) }
-                }
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
                     androidx.compose.foundation.layout.Spacer(Modifier.height(2.dp))
                 }

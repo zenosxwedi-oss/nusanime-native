@@ -3,6 +3,7 @@ package com.nusanime.app.ui.screens
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -13,41 +14,51 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-private val MB_GENRES = listOf("Populer", "Action", "Comedy", "Horror", "Romance", "Sci-Fi", "Thriller", "Animation", "Adventure", "Drama", "Crime", "Fantasy")
-
-/** Semua Movie (MovieBox) — grid + genre chips + muat otomatis. */
+/** Movie Bar — katalog TMDB: chips (Populer/Trending/Top/Baru) + genre + muat otomatis. */
 @Composable
-fun MovieListScreen(onOpenMovie: (String) -> Unit, onBack: () -> Unit, onOpenMissAv: () -> Unit = {}) {
-    var genre by remember { mutableStateOf("Populer") }
-    var items by remember(genre) { mutableStateOf<List<com.nusanime.app.data.api.MovieSource.MItem>>(emptyList()) }
+fun MovieListScreen(onOpenMovie: (String) -> Unit, onBack: () -> Unit) {
+    var tab by remember { mutableStateOf("popular") } // popular | trending | top_rated | now_playing | upcoming | g:<id>
+    var genres by remember { mutableStateOf<List<com.nusanime.app.data.api.MovieSource.M2Genre>>(emptyList()) }
+    var items by remember(tab) { mutableStateOf<List<com.nusanime.app.data.api.MovieSource.M2Item>>(emptyList()) }
+    var page by remember(tab) { mutableStateOf(1) }
     var loading by remember { mutableStateOf(true) }
+    var loadingMore by remember { mutableStateOf(false) }
+    var endReached by remember(tab) { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
 
-    suspend fun load(g: String) {
-        loading = true
-        val got = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            if (g == "Populer") com.nusanime.app.data.api.MovieSource.latestRaw(1)
-            else com.nusanime.app.data.api.MovieSource.genreRaw(g)
+    LaunchedEffect(Unit) {
+        genres = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.nusanime.app.data.api.MovieSource.genres()
         }
-        items = got
-        loading = false
     }
 
-    LaunchedEffect(genre) { load(genre) }
+    suspend fun load(p: Int) {
+        if (p == 1) loading = true else loadingMore = true
+        val res = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            if (tab.startsWith("g:")) com.nusanime.app.data.api.MovieSource.byGenre(tab.removePrefix("g:").toInt(), p)
+            else com.nusanime.app.data.api.MovieSource.list(tab, p)
+        }
+        if (p == 1) items = res.items else items = items + res.items
+        if (res.items.isEmpty() || res.next == null) endReached = true
+        page = p
+        loading = false; loadingMore = false
+    }
 
-    // auto reload when scrolled to bottom is not paged (catalog page is fixed 24) — refresh button instead
+    LaunchedEffect(tab) { endReached = false; load(1) }
+
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("← Kembali") }
-            Text("🎬 Movie — Semua", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.weight(1f))
-            Button(onClick = onOpenMissAv, colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF7C3AED))) {
-                Text("MissAV", style = MaterialTheme.typography.labelSmall)
-            }
+            Text("🎬 Movie Bar", style = MaterialTheme.typography.titleSmall)
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MB_GENRES.forEach { g ->
-                FilterChip(selected = genre == g, onClick = { genre = g }, label = { Text(g) })
+            FilterChip(selected = tab == "popular", onClick = { tab = "popular" }, label = { Text("🔥 Populer") })
+            FilterChip(selected = tab == "trending", onClick = { tab = "trending" }, label = { Text("📈 Trending") })
+            FilterChip(selected = tab == "top_rated", onClick = { tab = "top_rated" }, label = { Text("⭐ Terbaik") })
+            FilterChip(selected = tab == "now_playing", onClick = { tab = "now_playing" }, label = { Text("🆕 Baru") })
+            FilterChip(selected = tab == "upcoming", onClick = { tab = "upcoming" }, label = { Text("📅 Segera") })
+            genres.forEach { g ->
+                FilterChip(selected = tab == "g:" + g.id, onClick = { tab = "g:" + g.id }, label = { Text(g.name) })
             }
         }
         LazyVerticalGrid(
@@ -58,28 +69,42 @@ fun MovieListScreen(onOpenMovie: (String) -> Unit, onBack: () -> Unit, onOpenMis
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            items(items, key = { it.slug }) { m ->
-                Card(onClick = { onOpenMovie(m.slug) }) {
+            items(items, key = { "tmdb" + it.tmdbId }) { m ->
+                Card(onClick = { onOpenMovie("tmdb:" + m.tmdbId) }) {
                     Column {
                         coil.compose.AsyncImage(
                             model = m.poster,
                             contentDescription = m.title,
-                            modifier = Modifier.fillMaxWidth().height(145.dp),
+                            modifier = Modifier.fillMaxWidth().height(185.dp),
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                         )
                         Text(m.title, maxLines = 2, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(5.dp))
+                        Text(
+                            listOfNotNull(m.year.ifEmpty { null }, m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString(" · "),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+            }
+            if (!loading && !loadingMore && !endReached && items.isNotEmpty()) {
+                item(span = { GridItemSpan(3) }) {
+                    LaunchedEffect(items.size) { load(page + 1) }
+                    Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(Modifier.size(22.dp))
                     }
                 }
             }
             if (loading) {
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
+                item(span = { GridItemSpan(3) }) {
                     Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(Modifier.size(28.dp))
                     }
                 }
             }
             if (!loading && items.isEmpty()) {
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
+                item(span = { GridItemSpan(3) }) {
                     Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
                         Text("Tidak ada hasil", style = MaterialTheme.typography.labelSmall)
                     }

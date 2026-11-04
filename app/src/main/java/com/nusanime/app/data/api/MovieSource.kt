@@ -1,169 +1,87 @@
 package com.nusanime.app.data.api
 
 import com.google.gson.Gson
-import com.nusanime.app.data.model.AnimeItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Movies from lk21.tel (via our javapi server). Plays in WebView (vidlink embed). */
+/**
+ * Movie Bar — katalog TMDB via javapi /movie2/*, play via rantai vidsrc
+ * server-side (/movie/play?imdb=). Tanpa 18+, tanpa MovieBox, tanpa MissAV.
+ */
 object MovieSource {
     private const val API = "https://vpn.nusanime.web.id/javapi"
     private val gson = Gson()
 
-    data class MItem(val slug: String = "", val title: String = "", val poster: String = "", val site: Int = 0)
-    data class MServer(val label: String = "", val url: String = "")
-    data class MServers(val servers: List<MServer> = emptyList())
+    data class M2Item(val tmdbId: Int = 0, val title: String = "", val poster: String? = null, val year: String = "", val rating: Double = 0.0)
+    data class M2ListRes(val page: Int = 1, val items: List<M2Item> = emptyList(), val next: Int? = null)
+    data class M2Row(val title: String = "", val items: List<M2Item> = emptyList())
+    data class M2Home(val rows: List<M2Row> = emptyList())
+    data class M2Genre(val id: Int = 0, val name: String = "")
+    data class M2Detail(
+        val tmdbId: Int = 0, val title: String = "", val poster: String? = null,
+        val backdrop: String? = null, val overview: String? = null, val year: String = "",
+        val rating: Double = 0.0, val runtime: Int? = null,
+        val genres: List<String> = emptyList(), val imdbId: String? = null,
+    )
+    data class MPlay(val m3u8: String? = null)
 
     private fun apiGet(path: String): String? = try {
         val conn = URL(API + path).openConnection() as HttpURLConnection
-        conn.connectTimeout = 10000; conn.readTimeout = 20000
-        conn.setRequestProperty("User-Agent", JAV_UA)
+        conn.connectTimeout = 10000; conn.readTimeout = 30000
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36")
         conn.instanceFollowRedirects = true
         if (conn.responseCode !in 200..299) null
         else conn.inputStream.bufferedReader().use { it.readText() }
     } catch (_: Exception) { null }
 
-    fun toItems(json: String?): List<AnimeItem> {
-        if (json == null) return emptyList()
-        return try {
-            // MovieBox items: {title, subjectId, poster, year}; legacy lk21: {slug, title, poster}
-            val mb: Array<MbItem>? = try { gson.fromJson(json, Array<MbItem>::class.java) } catch (_: Exception) { null }
-            if (mb != null && mb.isNotEmpty() && mb[0].subjectId.isNotEmpty()) {
-                mb.filter { it.subjectId.isNotEmpty() }.map {
-                    AnimeItem(
-                        title = it.title, poster = it.poster, animeId = "mb:" + it.subjectId,
-                        episodeId = null, episodes = null, releasedOn = it.year.ifEmpty { null }, type = "movie",
-                        score = null, statusField = null, estimation = null, genreList = null, siteIdx = 0,
-                    )
-                }
-            } else {
-                gson.fromJson(json, Array<MItem>::class.java).map { m ->
-                    AnimeItem(
-                        title = m.title, poster = m.poster, animeId = "movie:" + m.slug,
-                        episodeId = null, episodes = null, releasedOn = null, type = "movie",
-                        score = null, statusField = null, estimation = null, genreList = null, siteIdx = 0,
-                    )
-                }
-            }
-        } catch (_: Exception) { emptyList() }
+    suspend fun home(): M2Home = withContext(Dispatchers.IO) {
+        try { gson.fromJson(apiGet("/movie2/home"), M2Home::class.java) ?: M2Home() }
+        catch (_: Exception) { M2Home() }
     }
 
-    suspend fun latest(page: Int = 1): List<AnimeItem> = withContext(Dispatchers.IO) { toItems(apiGet("/movie/latest?page=$page")) }
-
-    suspend fun latestRaw(page: Int = 1): List<MItem> = withContext(Dispatchers.IO) {
-        val json = apiGet("/movie/latest") ?: return@withContext emptyList()
-        try {
-            val mb: Array<MbItem> = gson.fromJson(json, Array<MbItem>::class.java)
-            mb.filter { it.subjectId.isNotEmpty() }.map { MItem(slug = "mb_" + it.subjectId, title = it.title, poster = it.poster, site = 0) }
-        } catch (_: Exception) {
-            try { gson.fromJson(json, Array<MItem>::class.java).toList() } catch (_: Exception) { emptyList() }
-        }
+    suspend fun list(kind: String, page: Int = 1): M2ListRes = withContext(Dispatchers.IO) {
+        try { gson.fromJson(apiGet("/movie2/list?kind=$kind&page=$page"), M2ListRes::class.java) ?: M2ListRes() }
+        catch (_: Exception) { M2ListRes() }
     }
-    suspend fun search(q: String): List<AnimeItem> = withContext(Dispatchers.IO) { toItems(apiGet("/movie/search?q=" + android.net.Uri.encode(q))) }
-    /** Resolve the native HD stream (server-side vidsrc chain, relayed). */
-    suspend fun hdStream(imdb: String): String? = withContext(Dispatchers.IO) {
+
+    suspend fun genres(): List<M2Genre> = withContext(Dispatchers.IO) {
+        try { gson.fromJson(apiGet("/movie2/genres"), Array<M2Genre>::class.java)?.toList() ?: emptyList() }
+        catch (_: Exception) { emptyList() }
+    }
+
+    suspend fun byGenre(id: Int, page: Int = 1): M2ListRes = withContext(Dispatchers.IO) {
+        try { gson.fromJson(apiGet("/movie2/genre?id=$id&page=$page"), M2ListRes::class.java) ?: M2ListRes() }
+        catch (_: Exception) { M2ListRes() }
+    }
+
+    suspend fun search(q: String, page: Int = 1): M2ListRes = withContext(Dispatchers.IO) {
+        try { gson.fromJson(apiGet("/movie2/search?q=" + java.net.URLEncoder.encode(q, "UTF-8") + "&page=$page"), M2ListRes::class.java) ?: M2ListRes() }
+        catch (_: Exception) { M2ListRes() }
+    }
+
+    suspend fun detail(tmdbId: Int): M2Detail? = withContext(Dispatchers.IO) {
+        try { gson.fromJson(apiGet("/movie2/detail?id=$tmdbId"), M2Detail::class.java) }
+        catch (_: Exception) { null }
+    }
+
+    /** Resolve playable relay m3u8 for a TMDB movie via its IMDb id. */
+    suspend fun play(tmdbId: Int): String? = withContext(Dispatchers.IO) {
+        val d = detail(tmdbId) ?: return@withContext null
+        val imdb = d.imdbId ?: return@withContext null
         try {
-            val r = gson.fromJson(apiGet("/movie/play?imdb=" + android.net.Uri.encode(imdb)), Map::class.java)
-            val rel = r?.get("m3u8") as? String ?: return@withContext null
+            val r = gson.fromJson(apiGet("/movie/play?imdb=" + java.net.URLEncoder.encode(imdb, "UTF-8")), MPlay::class.java)
+            val rel = r?.m3u8 ?: return@withContext null
             if (rel.startsWith("/")) API + rel else rel
         } catch (_: Exception) { null }
     }
 
-    suspend fun embeds(slug: String): List<MServer> = withContext(Dispatchers.IO) {
-        try { gson.fromJson(apiGet("/movie/post?slug=" + android.net.Uri.encode(slug)), MServers::class.java).servers }
-        catch (_: Exception) { emptyList() }
-    }
-
-    // ===== MovieBox provider =====
-    data class MbItem(val title: String = "", val subjectId: String = "", val poster: String = "", val year: String = "")
-    data class MbPlay(val mpd: String? = null, val cookie: String? = null, val resolution: Int = 0)
-
-    suspend fun mbSearch(q: String): List<AnimeItem> = withContext(Dispatchers.IO) {
-        try {
-            val json = apiGet("/movie/mb/search?q=" + java.net.URLEncoder.encode(q, "UTF-8")) ?: return@withContext emptyList()
-            val items: Array<MbItem> = gson.fromJson(json, Array<MbItem>::class.java) ?: return@withContext emptyList()
-            items.filter { it.subjectId.isNotEmpty() }.map {
-                AnimeItem(
-                    title = it.title,
-                    poster = it.poster,
-                    animeId = "mb:" + it.subjectId,
-                    episodeId = null,
-                    episodes = null,
-                    releasedOn = it.year.ifEmpty { null },
-                    type = "movie",
-                    score = null,
-                    statusField = null,
-                    estimation = null,
-                    genreList = null,
-                    siteIdx = null
-                )
-            }
-        } catch (_: Exception) { emptyList() }
-    }
-
-    suspend fun mbPost(sid: String): MServers = withContext(Dispatchers.IO) {
-        try {
-            val json = apiGet("/movie/mb/post?sid=" + sid) ?: return@withContext MServers(emptyList())
-            gson.fromJson(json, MServers::class.java) ?: MServers(emptyList())
-        } catch (_: Exception) { MServers(emptyList()) }
-    }
-
-    suspend fun mbPlay(sid: String): MbPlay? = withContext(Dispatchers.IO) {
-        try {
-            val json = apiGet("/movie/mb/play?sid=" + sid) ?: return@withContext null
-            gson.fromJson(json, MbPlay::class.java)
-        } catch (_: Exception) { null }
-    }
-
-    suspend fun genreList(g: String): List<AnimeItem> = withContext(Dispatchers.IO) {
-        try { toItems(apiGet("/movie/mb/genre?g=" + android.net.Uri.encode(g))) } catch (_: Exception) { emptyList() }
-    }
-
-    suspend fun genreRaw(g: String): List<MItem> = withContext(Dispatchers.IO) {
-        val json = apiGet("/movie/mb/genre?g=" + android.net.Uri.encode(g)) ?: return@withContext emptyList()
-        try {
-            val mb: Array<MbItem> = gson.fromJson(json, Array<MbItem>::class.java)
-            mb.filter { it.subjectId.isNotEmpty() }.map { MItem(slug = "mb_" + it.subjectId, title = it.title, poster = it.poster, site = 0) }
-        } catch (_: Exception) { emptyList() }
-    }
-
-    // ===== MissAV provider (javapi /missav/*) =====
-    data class MvListRes(val page: Int = 1, val items: List<MvItem> = emptyList(), val next: Int? = null)
-    data class MvItem(val slug: String = "", val url: String = "", val poster: String = "", val title: String = "")
-    data class MvGenre(val name: String = "", val slug: String = "")
-    data class MvPost(
-        val slug: String = "", val title: String = "", val poster: String? = null,
-        val date: String? = null, val genres: List<String> = emptyList(),
-        val actresses: List<String> = emptyList(), val uncensored: Boolean = false,
-        val m3u8: String? = null,
-    )
-
-    suspend fun mvHome(page: Int = 1): MvListRes = withContext(Dispatchers.IO) {
-        try { gson.fromJson(apiGet("/missav/home?page=$page"), MvListRes::class.java) ?: MvListRes() }
-        catch (_: Exception) { MvListRes() }
-    }
-
-    suspend fun mvList(path: String, page: Int = 1): MvListRes = withContext(Dispatchers.IO) {
-        try {
-            gson.fromJson(apiGet("/missav/list?path=" + java.net.URLEncoder.encode(path, "UTF-8") + "&page=$page"), MvListRes::class.java) ?: MvListRes()
-        } catch (_: Exception) { MvListRes() }
-    }
-
-    suspend fun mvGenres(): List<MvGenre> = withContext(Dispatchers.IO) {
-        try { gson.fromJson(apiGet("/missav/genre"), Array<MvGenre>::class.java)?.toList() ?: emptyList() }
-        catch (_: Exception) { emptyList() }
-    }
-
-    suspend fun mvSearch(q: String, page: Int = 1): MvListRes = withContext(Dispatchers.IO) {
-        try {
-            gson.fromJson(apiGet("/missav/search?q=" + java.net.URLEncoder.encode(q, "UTF-8") + "&page=$page"), MvListRes::class.java) ?: MvListRes()
-        } catch (_: Exception) { MvListRes() }
-    }
-
-    suspend fun mvPost(slug: String): MvPost? = withContext(Dispatchers.IO) {
-        try { gson.fromJson(apiGet("/missav/post?slug=" + java.net.URLEncoder.encode(slug, "UTF-8")), MvPost::class.java) }
-        catch (_: Exception) { null }
+    fun toItems(res: M2ListRes): List<com.nusanime.app.data.model.AnimeItem> = res.items.map {
+        com.nusanime.app.data.model.AnimeItem(
+            title = it.title, poster = it.poster, animeId = "tmdb:" + it.tmdbId,
+            episodeId = null, episodes = null, releasedOn = it.year.ifEmpty { null }, type = "movie",
+            score = null, statusField = null, estimation = null, genreList = null, siteIdx = 0,
+        )
     }
 }

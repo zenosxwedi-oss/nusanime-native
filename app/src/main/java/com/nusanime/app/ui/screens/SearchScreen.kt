@@ -40,7 +40,6 @@ class SearchViewModel : ViewModel() {
     }
 
     var movieResults by mutableStateOf<List<AnimeItem>>(emptyList())
-    var mbResults by mutableStateOf<List<AnimeItem>>(emptyList())
 
     fun search(q: String) {
         viewModelScope.launch {
@@ -54,16 +53,14 @@ class SearchViewModel : ViewModel() {
                 "Gagal mencari: ${e.message ?: "kesalahan jaringan"}"
             }
             loading = false
-            // Movie search (lk21 via server, always on)
-            try { movieResults = com.nusanime.app.data.api.MovieSource.search(q.trim()) } catch (_: Exception) { movieResults = emptyList() }
-            // MovieBox search (native 1080p)
-            try { mbResults = com.nusanime.app.data.api.MovieSource.mbSearch(q.trim()) } catch (_: Exception) { mbResults = emptyList() }
+            // Movie Bar search (TMDB via server)
+            try { movieResults = com.nusanime.app.data.api.MovieSource.search(q.trim()).let { com.nusanime.app.data.api.MovieSource.run { toItems(it) } } } catch (_: Exception) { movieResults = emptyList() }
         }
     }
 }
 
 @Composable
-fun SearchScreen(onOpenDetail: (String) -> Unit, onOpen18: (String) -> Unit = {}, onOpenMovie: (String) -> Unit = {}) {
+fun SearchScreen(onOpenDetail: (String) -> Unit, onOpenMovie: (String) -> Unit = {}) {
     val vm: SearchViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     Column(Modifier.fillMaxSize()) {
@@ -71,7 +68,7 @@ fun SearchScreen(onOpenDetail: (String) -> Unit, onOpen18: (String) -> Unit = {}
             value = vm.query,
             onValueChange = vm::onQueryChange,
             modifier = Modifier.fillMaxWidth().padding(12.dp),
-            placeholder = { Text("Cari anime...") },
+            placeholder = { Text("Cari anime / movie...") },
             leadingIcon = { Icon(Icons.Default.Search, null) },
             trailingIcon = {
                 if (vm.query.isNotEmpty()) IconButton(onClick = { vm.onQueryChange("") }) { Icon(Icons.Default.Close, "Bersihkan") }
@@ -94,21 +91,13 @@ fun SearchScreen(onOpenDetail: (String) -> Unit, onOpen18: (String) -> Unit = {}
             ) {
                 if (vm.movieResults.isNotEmpty()) {
                     item(span = { GridItemSpan(3) }) {
-                        Text("🎬 Movie — lk21", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                    }
-                }
-                if (vm.mbResults.isNotEmpty()) {
-                    item(span = { GridItemSpan(3) }) {
-                        Text("🎬 Movie — MovieBox HD", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Text("🎬 Movie Bar", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                     }
                 }
                 items(vm.results) { item ->
                     AnimeCard(item) { item.animeId?.let(onOpenDetail) }
                 }
                 items(vm.movieResults) { m ->
-                    AnimeCard(m) { m.animeId?.removePrefix("movie:")?.let(onOpenMovie) }
-                }
-                items(vm.mbResults) { m ->
                     AnimeCard(m) { m.animeId?.let(onOpenMovie) }
                 }
             }

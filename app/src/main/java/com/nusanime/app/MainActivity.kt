@@ -58,12 +58,8 @@ object Routes {
     const val DOWNLOADS = "downloads"
     const val SETTINGS = "settings"
     const val DETAIL = "detail/{animeId}"
-    const val JAV = "jav/{slug}"
-    const val JAVGENRE = "javgenre"
     const val MOVIE = "movie/{slug}"
         const val MOVIELIST = "movielist"
-    const val MVISSLIST = "mvlist"
-    const val MVWATCH = "mvwatch/{slug}"
     const val PLAYER = "player/{episodeId}"
     fun detail(animeId: String) = "detail/$animeId"
     fun player(episodeId: String) = "player/$episodeId"
@@ -231,13 +227,11 @@ fun App(openEpisode: String? = null) {
                     { nav.navigate(Routes.detail(it)) },
                     { nav.navigate(Routes.player(it)) },
                     onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MOVIELIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
-                    onOpenMissAv = { nav.navigate(Routes.MVISSLIST) },
                 )
             }
             composable(Routes.MOVIELIST) {
                 com.nusanime.app.ui.screens.MovieListScreen(
                     onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MOVIELIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
-                    onOpenMissAv = { nav.navigate(Routes.MVISSLIST) },
                     onBack = { nav.popBackStack() },
                 )
             }
@@ -248,19 +242,6 @@ fun App(openEpisode: String? = null) {
                 val slug = java.net.URLDecoder.decode(be.arguments?.getString("slug") ?: "", "UTF-8")
                 com.nusanime.app.ui.screens.MovieScreen(slug) { nav.popBackStack() }
             }
-            composable(Routes.MVISSLIST) {
-                com.nusanime.app.ui.screens.MissAvListScreen(
-                    onOpenMovie = { slug -> nav.navigate("mvwatch/" + java.net.URLEncoder.encode(slug.removePrefix("mv:"), "UTF-8")) },
-                    onBack = { nav.popBackStack() },
-                )
-            }
-            composable(
-                Routes.MVWATCH,
-                arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType }),
-            ) { be ->
-                val slug = java.net.URLDecoder.decode(be.arguments?.getString("slug") ?: "", "UTF-8")
-                com.nusanime.app.ui.screens.MissAvScreen(slug) { nav.popBackStack() }
-            }
             composable(Routes.ONGOING) { ListScreen(Source.Ongoing, onOpenDetail = { nav.navigate(Routes.detail(it)) }, onOpenEpisode = { nav.navigate(Routes.player(it)) }) }
             composable(Routes.COMPLETED) { ListScreen(Source.Completed, onOpenDetail = { nav.navigate(Routes.detail(it)) }) }
             composable(Routes.SCHEDULE) { ScheduleScreen { nav.navigate(Routes.detail(it)) } }
@@ -268,7 +249,7 @@ fun App(openEpisode: String? = null) {
             composable(Routes.SEARCH) {
                 SearchScreen(
                     onOpenDetail = { nav.navigate(Routes.detail(it)) },
-                    onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MVISSLIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
+                    onOpenMovie = { slug -> if (slug == "__ALL__") nav.navigate(Routes.MOVIELIST) else nav.navigate("movie/" + java.net.URLEncoder.encode(slug, "UTF-8")) },
                 )
             }
             composable(Routes.BOOKMARKS) { BookmarksScreen { nav.navigate(Routes.detail(it)) } }
