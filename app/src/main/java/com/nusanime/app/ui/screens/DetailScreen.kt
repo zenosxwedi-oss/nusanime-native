@@ -153,6 +153,10 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
             ep.episodeId?.let { eid -> com.nusanime.app.data.PosterCache.put(eid, com.nusanime.app.data.PosterCache.Info(d.poster, animeId, d.title)) }
         }
     }
+    val allEps = d.episodeList.orEmpty()
+    val epChunk = 100
+    var epPage by remember(d) { mutableStateOf(0) }
+    val epTotalPages = (allEps.size + epChunk - 1) / epChunk
     LazyColumn(Modifier.fillMaxSize()) {
         item {
             Box(Modifier.fillMaxWidth().height(240.dp)) {
@@ -241,20 +245,16 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
             }
         }
         // Pagination per 100 episode biar list gak kepanjangan & scroll tetap mulus.
-        val allEps = d.episodeList.orEmpty()
-        val chunk = 100
-        var epPage by remember(d) { mutableStateOf(0) }
-        val totalPages = (allEps.size + chunk - 1) / chunk
-        if (totalPages > 1) {
+        if (epTotalPages > 1) {
             item {
                 androidx.compose.foundation.lazy.LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.padding(bottom = 8.dp),
                 ) {
-                    items((0 until totalPages).toList()) { pg ->
-                        val from = pg * chunk + 1
-                        val to = ((pg + 1) * chunk).coerceAtMost(allEps.size)
+                    items((0 until epTotalPages).toList()) { pg ->
+                        val from = pg * epChunk + 1
+                        val to = ((pg + 1) * epChunk).coerceAtMost(allEps.size)
                         FilterChip(
                             selected = epPage == pg,
                             onClick = { epPage = pg },
@@ -264,10 +264,9 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                 }
             }
         }
-        val shownEps = if (totalPages > 1) {
-            // Tampilkan halaman terpilih; episode terbaru biasanya di awal list.
-            val start = epPage * chunk
-            allEps.drop(start).take(chunk)
+        val shownEps = if (epTotalPages > 1) {
+            val start = epPage * epChunk
+            allEps.drop(start).take(epChunk)
         } else allEps
         items(shownEps, contentType = { "ep" }) { ep ->
             EpisodeRow(ep, onClick = { ep.episodeId?.let(onOpenEpisode) })
