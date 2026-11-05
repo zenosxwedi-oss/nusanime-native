@@ -157,10 +157,9 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
         }
     }
     val allEps = d.episodeList.orEmpty()
-    val epChunk = 100
-    var epPage by remember(d) { mutableStateOf(0) }
-    val epTotalPages = (allEps.size + epChunk - 1) / epChunk
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
             Box(Modifier.fillMaxWidth().height(240.dp)) {
                 AsyncImage(
@@ -244,41 +243,23 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                     Spacer(Modifier.height(16.dp))
                 }
                 Text("Daftar Episode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                if (epTotalPages > 1) {
-                    Text("Geser chip di bawah buat pilih rentang episode (contoh: 100-1 = episode awal)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = {
+                        scope.launch { listState.animateScrollToItem(0) }
+                    }, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
+                        Text("⬆ Terbaru", style = MaterialTheme.typography.labelMedium)
+                    }
+                    OutlinedButton(onClick = {
+                        scope.launch { if (allEps.isNotEmpty()) listState.animateScrollToItem(allEps.size - 1) }
+                    }, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
+                        Text("⬇ Episode 1", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
             }
         }
-        // Pagination per 100 episode biar list gak kepanjangan & scroll tetap mulus.
-        if (epTotalPages > 1) {
-            item {
-            androidx.compose.foundation.lazy.LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(bottom = 8.dp),
-                ) {
-                    items((0 until epTotalPages).toList()) { pg ->
-                        val chunkEps = allEps.drop(pg * epChunk).take(epChunk)
-                        // Label pakai NOMOR EPISODE asli (list urut terbaru dulu), mis. 1165-1066 ... 100-1
-                        val nums = chunkEps.mapNotNull { e -> (e.title as? Number)?.toInt() ?: e.title?.toString()?.toIntOrNull() }
-                        val hi = nums.maxOrNull()
-                        val lo = nums.minOrNull()
-                        val label = if (hi != null && lo != null) "$hi-$lo" else "${pg * epChunk + 1}-${((pg + 1) * epChunk).coerceAtMost(allEps.size)}"
-                        FilterChip(
-                            selected = epPage == pg,
-                            onClick = { epPage = pg },
-                            label = { Text(label) },
-                        )
-                    }
-                }
-            }
-        }
-        val shownEps = if (epTotalPages > 1) {
-            val start = epPage * epChunk
-            allEps.drop(start).take(epChunk)
-        } else allEps
-        itemsIndexed(shownEps, contentType = { _, _ -> "ep" }) { idx, ep ->
+        // SEMUA episode dalam satu list — recycle otomatis, tetap mulus walau 1200 episode.
+        itemsIndexed(allEps, contentType = { _, _ -> "ep" }) { idx, ep ->
             EpisodeRow(ep, index = idx, onClick = { ep.episodeId?.let(onOpenEpisode) })
         }
         if (d.episodeList.isNullOrEmpty()) {
