@@ -159,59 +159,66 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
     val allEps = d.episodeList.orEmpty()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
-        item {
-            Box(Modifier.fillMaxWidth().height(240.dp)) {
-                AsyncImage(
-                    model = d.poster,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().alpha(0.5f),
-                )
-                Box(
-                    Modifier.fillMaxSize().background(
-                        Brush.verticalGradient(listOf(Color.Transparent, MaterialTheme.colorScheme.surface))
-                    )
-                )
-                Row(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
-                    AsyncImage(
-                        model = d.poster,
-                        contentDescription = d.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.width(110.dp).aspectRatio(2f / 3f),
-                    )
-                    Column(Modifier.padding(start = 12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(d.title ?: "-", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            val ctx = androidx.compose.ui.platform.LocalContext.current
-                            IconButton(onClick = { vm.toggleBookmark() }) {
-                                Icon(
-                                    if (vm.bookmarked) Icons.Filled.Bookmarks
-                                    else Icons.Filled.BookmarkBorder,
-                                    contentDescription = if (vm.bookmarked) "Hapus bookmark" else "Bookmark",
-                                    tint = if (vm.bookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            IconButton(onClick = { vm.toggleFollow(ctx) }) {
-                                Icon(
-                                    if (vm.followed) Icons.Filled.NotificationsActive
-                                    else Icons.Filled.NotificationsNone,
-                                    contentDescription = if (vm.followed) "Berhenti ikuti" else "Ikuti",
-                                    tint = if (vm.followed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+
+    Column {
+        // Header kembali (dipisah dari area scroll, seperti halaman JADWAL yang pasti bisa di-scroll)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali")
+            }
+            Text("Detail", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            val hctx = androidx.compose.ui.platform.LocalContext.current
+            IconButton(onClick = { vm.toggleBookmark() }) {
+                Icon(if (vm.bookmarked) Icons.Filled.Bookmarks else Icons.Filled.BookmarkBorder, contentDescription = "Bookmark", tint = if (vm.bookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        // Poster + info dalam CARD (pola sama dengan halaman JADWAL yang terbukti bisa scroll)
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Column(Modifier.padding(12.dp)) {
+                        Row {
+                            AsyncImage(
+                                model = d.poster,
+                                contentDescription = d.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.width(100.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(12.dp)),
+                            )
+                            Column(Modifier.padding(start = 12.dp)) {
+                                Text(d.title ?: "-", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                Spacer(Modifier.height(6.dp))
+                                listOfNotNull(d.status, d.type, d.duration, d.season).forEach {
+                                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                d.score?.let {
+                                    Text("★ ${it}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                }
+                                vm.followed.let {
+                                    TextButton(onClick = { vm.toggleFollow(androidx.compose.ui.platform.LocalContext.current) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                                        Text(if (it) "🔔 Mengikuti" else "🔔 Ikuti", style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
                             }
                         }
-                        Spacer(Modifier.height(6.dp))
-                        listOfNotNull(d.status, d.type, d.duration, d.season).forEach {
-                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (!d.genreList.isNullOrEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(d.genreList.orEmpty().mapNotNull { it.title }.joinToString(" • "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        val syn = d.synopsisText()
+                        if (syn.isNotBlank()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(syn, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 4, overflow = TextOverflow.Ellipsis)
                         }
                         vm.trailerUrl?.let { url ->
-                            val tctx = androidx.compose.ui.platform.LocalContext.current
                             Spacer(Modifier.height(8.dp))
                             OutlinedButton(onClick = {
-                                try {
-                                    tctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
-                                } catch (_: Exception) {}
+                                try { androidx.compose.ui.platform.LocalContext.current.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } catch (_: Exception) {}
                             }) {
                                 Icon(Icons.Filled.PlayArrow, null, Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
@@ -221,93 +228,64 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                     }
                 }
             }
-        }
-        item {
-        Column(Modifier.padding(16.dp)) {
-                val genres = d.genreList?.mapNotNull { it.title }.orEmpty()
-                if (genres.isNotEmpty()) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        genres.forEach { g ->
-                            Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
-                                Text(g, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                }
-                val syn = d.synopsisText()
-                if (syn.isNotBlank()) {
-                    Text("Sinopsis", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(6.dp))
-                    Text(syn, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(16.dp))
-                }
-                Text("Daftar Episode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Daftar Episode (${allEps.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     OutlinedButton(onClick = {
                         scope.launch { listState.animateScrollToItem(0) }
-                    }, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
-                        Text("⬆ Terbaru", style = MaterialTheme.typography.labelMedium)
+                    }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                        Text("⬆", style = MaterialTheme.typography.labelLarge)
                     }
                     OutlinedButton(onClick = {
                         scope.launch { if (allEps.isNotEmpty()) listState.animateScrollToItem(allEps.size - 1) }
-                    }, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
-                        Text("⬇ Episode 1", style = MaterialTheme.typography.labelMedium)
+                    }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                        Text("Ep 1 ⬇", style = MaterialTheme.typography.labelLarge)
                     }
                 }
-                Spacer(Modifier.height(8.dp))
             }
-        }
-        // SEMUA episode dalam satu list — recycle otomatis, tetap mulus walau 1200 episode.
-        itemsIndexed(allEps, contentType = { _, _ -> "ep" }) { idx, ep ->
-            EpisodeRow(ep, index = idx, onClick = { ep.episodeId?.let(onOpenEpisode) })
-        }
-        if (d.episodeList.isNullOrEmpty()) {
+            itemsIndexed(allEps, contentType = { _, _ -> "ep" }) { idx, ep ->
+                EpisodeRow(ep, index = idx, onClick = { ep.episodeId?.let(onOpenEpisode) })
+            }
+            if (allEps.isEmpty()) {
+                item { Text("Belum ada episode.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
             item {
-                Text("Belum ada episode.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Rekomendasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
             }
-        }
-        item {
-            Spacer(Modifier.height(16.dp))
-            Text("Rekomendasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-        }
-        item {
-        Column {
-            val recs = remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
-            androidx.compose.runtime.LaunchedEffect(animeId) {
-                try {
-                    val env = com.nusanime.app.data.api.AxSource.home()
-                    val h = env.data
-                    recs.value = (h?.top10?.animeList.orEmpty() + h?.recent?.animeList.orEmpty())
-                        .distinctBy { it.animeId }
-                        .filter { it.animeId != null && it.animeId != animeId }
-                        .take(12)
-                } catch (_: Exception) {}
-            }
-            if (recs.value.isEmpty()) {
-                Text("Memuat rekomendasi...", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-            } else {
-                androidx.compose.foundation.lazy.LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items(recs.value, key = { it.animeId ?: it.title ?: "" }) { r ->
-                        Column(Modifier.width(110.dp).clickable { r.animeId?.let { id -> onOpenDetail(id) } }) {
-                            AsyncImage(
-                                model = r.poster,
-                                contentDescription = r.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxWidth().height(155.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text(r.title ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            item {
+                val recs = remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
+                androidx.compose.runtime.LaunchedEffect(animeId) {
+                    try {
+                        val env = com.nusanime.app.data.api.AxSource.home()
+                        val h = env.data
+                        recs.value = (h?.top10?.animeList.orEmpty() + h?.recent?.animeList.orEmpty())
+                            .distinctBy { it.animeId }
+                            .filter { it.animeId != null && it.animeId != animeId }
+                            .take(12)
+                    } catch (_: Exception) {}
+                }
+                if (recs.value.isEmpty()) {
+                    Text("Memuat rekomendasi...", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                } else {
+                    androidx.compose.foundation.lazy.LazyRow(
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(recs.value, key = { it.animeId ?: it.title ?: "" }) { r ->
+                            Column(Modifier.width(110.dp).clickable { r.animeId?.let { id -> onOpenDetail(id) } }) {
+                                AsyncImage(
+                                    model = r.poster,
+                                    contentDescription = r.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxWidth().height(155.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(r.title ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                 }
             }
-            Spacer(Modifier.height(24.dp))
-        }
         }
     }
 }
