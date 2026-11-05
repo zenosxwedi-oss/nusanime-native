@@ -157,6 +157,7 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
         }
     }
     val allEps = d.episodeList.orEmpty()
+    val pageCtx = androidx.compose.ui.platform.LocalContext.current
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -199,10 +200,8 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                                 d.score?.let {
                                     Text("★ ${it}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                 }
-                                vm.followed.let {
-                                    TextButton(onClick = { vm.toggleFollow(androidx.compose.ui.platform.LocalContext.current) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
-                                        Text(if (it) "🔔 Mengikuti" else "🔔 Ikuti", style = MaterialTheme.typography.labelMedium)
-                                    }
+                                TextButton(onClick = { vm.toggleFollow(pageCtx) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                                    Text(if (vm.followed) "🔔 Mengikuti" else "🔔 Ikuti", style = MaterialTheme.typography.labelMedium)
                                 }
                             }
                         }
@@ -218,7 +217,7 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                         vm.trailerUrl?.let { url ->
                             Spacer(Modifier.height(8.dp))
                             OutlinedButton(onClick = {
-                                try { androidx.compose.ui.platform.LocalContext.current.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } catch (_: Exception) {}
+                                try { pageCtx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } catch (_: Exception) {}
                             }) {
                                 Icon(Icons.Filled.PlayArrow, null, Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
