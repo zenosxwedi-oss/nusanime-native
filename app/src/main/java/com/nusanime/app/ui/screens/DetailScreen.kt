@@ -220,7 +220,6 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                     }
                 }
             }
-        }
         Column(Modifier.padding(16.dp)) {
                 val genres = d.genreList?.mapNotNull { it.title }.orEmpty()
                 if (genres.isNotEmpty()) {
