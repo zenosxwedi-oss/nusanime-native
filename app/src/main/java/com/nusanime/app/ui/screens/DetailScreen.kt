@@ -240,6 +240,9 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                     Spacer(Modifier.height(16.dp))
                 }
                 Text("Daftar Episode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                if (epTotalPages > 1) {
+                    Text("Geser chip di bawah buat pilih rentang episode (contoh: 100-1 = episode awal)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Spacer(Modifier.height(8.dp))
             }
         // Pagination per 100 episode biar list gak kepanjangan & scroll tetap mulus.
@@ -250,12 +253,16 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                     modifier = Modifier.padding(bottom = 8.dp),
                 ) {
                     items((0 until epTotalPages).toList()) { pg ->
-                        val from = pg * epChunk + 1
-                        val to = ((pg + 1) * epChunk).coerceAtMost(allEps.size)
+                        val chunkEps = allEps.drop(pg * epChunk).take(epChunk)
+                        // Label pakai NOMOR EPISODE asli (list urut terbaru dulu), mis. 1165-1066 ... 100-1
+                        val nums = chunkEps.mapNotNull { e -> (e.title as? Number)?.toInt() ?: e.title?.toString()?.toIntOrNull() }
+                        val hi = nums.maxOrNull()
+                        val lo = nums.minOrNull()
+                        val label = if (hi != null && lo != null) "$hi-$lo" else "${pg * epChunk + 1}-${((pg + 1) * epChunk).coerceAtMost(allEps.size)}"
                         FilterChip(
                             selected = epPage == pg,
                             onClick = { epPage = pg },
-                            label = { Text("$from-$to") },
+                            label = { Text(label) },
                         )
                     }
                 }
