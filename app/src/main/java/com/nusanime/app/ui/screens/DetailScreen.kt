@@ -240,7 +240,36 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                 Spacer(Modifier.height(8.dp))
             }
         }
-        items(d.episodeList.orEmpty(), contentType = { "ep" }) { ep ->
+        // Pagination per 100 episode biar list gak kepanjangan & scroll tetap mulus.
+        val allEps = d.episodeList.orEmpty()
+        val chunk = 100
+        var epPage by remember(d) { mutableStateOf(0) }
+        val totalPages = (allEps.size + chunk - 1) / chunk
+        if (totalPages > 1) {
+            item {
+                androidx.compose.foundation.lazy.LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(bottom = 8.dp),
+                ) {
+                    items((0 until totalPages).toList()) { pg ->
+                        val from = pg * chunk + 1
+                        val to = ((pg + 1) * chunk).coerceAtMost(allEps.size)
+                        FilterChip(
+                            selected = epPage == pg,
+                            onClick = { epPage = pg },
+                            label = { Text("$from-$to") },
+                        )
+                    }
+                }
+            }
+        }
+        val shownEps = if (totalPages > 1) {
+            // Tampilkan halaman terpilih; episode terbaru biasanya di awal list.
+            val start = epPage * chunk
+            allEps.drop(start).take(chunk)
+        } else allEps
+        items(shownEps, contentType = { "ep" }) { ep ->
             EpisodeRow(ep, onClick = { ep.episodeId?.let(onOpenEpisode) })
         }
         if (d.episodeList.isNullOrEmpty()) {
