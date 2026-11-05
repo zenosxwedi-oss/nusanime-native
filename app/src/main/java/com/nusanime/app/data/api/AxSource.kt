@@ -201,21 +201,21 @@ object AxSource {
     // ---------- Otakudesu via sankavollerei (FULL episode list) ----------
     private const val OD_BASE = "https://www.sankavollerei.web.id/anime"
 
-    private fun odGet(path: String): String? =
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                val conn = java.net.URL(OD_BASE + path).openConnection() as java.net.HttpURLConnection
-                conn.connectTimeout = 12000
-                conn.readTimeout = 20000
-                conn.setRequestProperty("User-Agent", "okhttp/4.12.0")
-                conn.setRequestProperty("Accept", "application/json")
-                if (conn.responseCode !in 200..299) null
-                else conn.inputStream.bufferedReader().use { it.readText() }
-            } catch (_: Exception) { null }
-        }
+    private fun odGet(path: String): String? = try {
+        val conn = java.net.URL(OD_BASE + path).openConnection() as java.net.HttpURLConnection
+        conn.connectTimeout = 12000
+        conn.readTimeout = 20000
+        conn.setRequestProperty("User-Agent", "okhttp/4.12.0")
+        conn.setRequestProperty("Accept", "application/json")
+        if (conn.responseCode !in 200..299) null
+        else conn.inputStream.bufferedReader().use { it.readText() }
+    } catch (_: Exception) { null }
 
     /** Cari anime di Otakudesu lalu ambil detail + daftar episode LENGKAP. */
-    suspend fun odDetail(animeId: String): DetailData? {
+    suspend fun odDetail(animeId: String): DetailData? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { odDetailIO(animeId) }
+
+    private fun odDetailIO(animeId: String): DetailData? {
         // animeId may be an otakudesu id already (e.g. "1piece-sub-indo") or a search term
         var body = odGet("/anime/anime/" + java.net.URLEncoder.encode(animeId, "UTF-8"))
         var det = parseOdDetail(body)
@@ -250,7 +250,10 @@ object AxSource {
     }
 
     /** Episode Otakudesu: serverId perlu di-resolve via /anime/server/:id. */
-    suspend fun odEpisode(episodeId: String): EpisodeData? {
+    suspend fun odEpisode(episodeId: String): EpisodeData? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { odEpisodeIO(episodeId) }
+
+    private fun odEpisodeIO(episodeId: String): EpisodeData? {
         val body = odGet("/anime/episode/" + java.net.URLEncoder.encode(episodeId, "UTF-8")) ?: return null
         return try {
             val dataEl = com.google.gson.JsonParser.parseString(body).asJsonObject.getAsJsonObject("data")
@@ -260,7 +263,10 @@ object AxSource {
     }
 
     /** Resolve serverId (otakudesu) → embed URL. */
-    suspend fun odServer(serverId: String): String? {
+    suspend fun odServer(serverId: String): String? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { odServerIO(serverId) }
+
+    private fun odServerIO(serverId: String): String? {
         val body = odGet("/anime/server/" + java.net.URLEncoder.encode(serverId, "UTF-8")) ?: return null
         return try {
             com.google.gson.JsonParser.parseString(body).asJsonObject
