@@ -240,7 +240,7 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                 Spacer(Modifier.height(8.dp))
             }
         }
-        items(d.episodeList.orEmpty()) { ep ->
+        items(d.episodeList.orEmpty(), key = { it.episodeId ?: it.titleText() }) { ep ->
             EpisodeRow(ep, onClick = { ep.episodeId?.let(onOpenEpisode) })
         }
         if (d.episodeList.isNullOrEmpty()) {

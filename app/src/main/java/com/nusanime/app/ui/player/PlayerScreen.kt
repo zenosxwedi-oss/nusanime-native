@@ -461,7 +461,7 @@ private fun PlayerArea(vm: PlayerViewModel, fillScreen: Boolean = false) {
         if (url != null && player != null) {
             AndroidView(
                 factory = {
-                    PlayerView(it).apply {
+                    ScrollFriendlyPlayerView(it).apply {
                         useController = true
                         resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
                         setFullscreenButtonClickListener { isFs ->
