@@ -116,6 +116,12 @@ object AxSource {
         return Envelope(status = "success", data = data)
         } catch (_: Exception) {}
 
+        // Otakudesu (sankavollerei) — DAFTAR EPISODE LENGKAP sampai episode 1
+        try {
+            val od = odDetail(animeId)
+            if (od != null) return Envelope(status = "success", data = od)
+        } catch (_: Exception) {}
+
         // samehadaku direct detail (body is an ENVELOPE {status, data:{...}} — parse .data, not the envelope)
         val body = rawJson("anime/" + animeId) ?: throw RuntimeException("Anime tidak ditemukan")
         val obj = try { com.google.gson.JsonParser.parseString(body).asJsonObject } catch (_: Exception) { null }
@@ -128,6 +134,13 @@ object AxSource {
     }
 
     suspend fun episode(episodeId: String): Envelope<EpisodeData> {
+        // PRIMARY: Otakudesu (sankavollerei) — semua episode punya stream
+        try {
+            val od = odEpisode(episodeId)
+            if (od != null && (!od.defaultStreamingUrl.isNullOrBlank() || !od.server?.qualities.isNullOrEmpty())) {
+                return Envelope(status = "success", data = od)
+            }
+        } catch (_: Exception) {}
         // streamnew is flaky: retry a few times before giving up
         var servers = AnimeInApi.servers(episodeId)
         var tries = 0
@@ -184,9 +197,87 @@ object AxSource {
         return Envelope(status = "success", data = data)
     }
 
-    /** serverId carries the direct link (see episode()). */
-    suspend fun server(serverId: String): Envelope<ServerResult> =
-        Envelope(status = "success", data = ServerResult(url = serverId))
+
+    // ---------- Otakudesu via sankavollerei (FULL episode list) ----------
+    private const val OD_BASE = "https://www.sankavollerei.web.id/anime"
+
+    private fun odGet(path: String): String? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val conn = java.net.URL(OD_BASE + path).openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 12000
+                conn.readTimeout = 20000
+                conn.setRequestProperty("User-Agent", "okhttp/4.12.0")
+                conn.setRequestProperty("Accept", "application/json")
+                if (conn.responseCode !in 200..299) null
+                else conn.inputStream.bufferedReader().use { it.readText() }
+            } catch (_: Exception) { null }
+        }
+
+    /** Cari anime di Otakudesu lalu ambil detail + daftar episode LENGKAP. */
+    suspend fun odDetail(animeId: String): DetailData? {
+        // animeId may be an otakudesu id already (e.g. "1piece-sub-indo") or a search term
+        var body = odGet("/anime/anime/" + java.net.URLEncoder.encode(animeId, "UTF-8"))
+        var det = parseOdDetail(body)
+        if (det != null) return det
+        // fallback: search then take first result
+        val sbody = odGet("/anime/search/" + java.net.URLEncoder.encode(animeId, "UTF-8"))
+        if (sbody != null) {
+            try {
+                val arr = com.google.gson.JsonParser.parseString(sbody).asJsonObject
+                    .getAsJsonObject("data").getAsJsonArray("animeList")
+                val firstId = arr.firstOrNull()?.asJsonObject?.get("animeId")?.asString
+                if (firstId != null) {
+                    body = odGet("/anime/anime/" + java.net.URLEncoder.encode(firstId, "UTF-8"))
+                    det = parseOdDetail(body)
+                    if (det != null) return det
+                }
+            } catch (_: Exception) {}
+        }
+        return null
+    }
+
+    private fun parseOdDetail(body: String?): DetailData? {
+        if (body == null) return null
+        return try {
+            val dataEl = com.google.gson.JsonParser.parseString(body).asJsonObject.getAsJsonObject("data")
+            if (dataEl == null || dataEl.isJsonNull) null
+            else {
+                val d = com.google.gson.Gson().fromJson(dataEl, DetailData::class.java)
+                if (d?.title == null) null else d
+            }
+        } catch (_: Exception) { null }
+    }
+
+    /** Episode Otakudesu: serverId perlu di-resolve via /anime/server/:id. */
+    suspend fun odEpisode(episodeId: String): EpisodeData? {
+        val body = odGet("/anime/episode/" + java.net.URLEncoder.encode(episodeId, "UTF-8")) ?: return null
+        return try {
+            val dataEl = com.google.gson.JsonParser.parseString(body).asJsonObject.getAsJsonObject("data")
+            if (dataEl == null || dataEl.isJsonNull) null
+            else com.google.gson.Gson().fromJson(dataEl, EpisodeData::class.java)
+        } catch (_: Exception) { null }
+    }
+
+    /** Resolve serverId (otakudesu) → embed URL. */
+    suspend fun odServer(serverId: String): String? {
+        val body = odGet("/anime/server/" + java.net.URLEncoder.encode(serverId, "UTF-8")) ?: return null
+        return try {
+            com.google.gson.JsonParser.parseString(body).asJsonObject
+                .getAsJsonObject("data").get("url")?.asString
+        } catch (_: Exception) { null }
+    }
+
+    /** serverId: direct link (animein) or otakudesu server id needing resolution. */
+    suspend fun server(serverId: String): Envelope<ServerResult> {
+        if (!serverId.startsWith("http")) {
+            try {
+                val resolved = odServer(serverId)
+                if (!resolved.isNullOrBlank()) return Envelope(status = "success", data = ServerResult(url = resolved))
+            } catch (_: Exception) {}
+        }
+        return Envelope(status = "success", data = ServerResult(url = serverId))
+    }
 
     private suspend fun rawJson(path: String): String? =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
