@@ -159,8 +159,9 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
     val epChunk = 100
     var epPage by remember(d) { mutableStateOf(0) }
     val epTotalPages = (allEps.size + epChunk - 1) / epChunk
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Box(Modifier.fillMaxWidth().height(240.dp)) {
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            Box(Modifier.fillMaxWidth().height(240.dp)) {
                 AsyncImage(
                     model = d.poster,
                     contentDescription = null,
@@ -220,6 +221,8 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                     }
                 }
             }
+        }
+        item {
         Column(Modifier.padding(16.dp)) {
                 val genres = d.genreList?.mapNotNull { it.title }.orEmpty()
                 if (genres.isNotEmpty()) {
@@ -245,8 +248,10 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                 }
                 Spacer(Modifier.height(8.dp))
             }
+        }
         // Pagination per 100 episode biar list gak kepanjangan & scroll tetap mulus.
         if (epTotalPages > 1) {
+            item {
             androidx.compose.foundation.lazy.LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -266,20 +271,26 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                         )
                     }
                 }
+            }
         }
         val shownEps = if (epTotalPages > 1) {
             val start = epPage * epChunk
             allEps.drop(start).take(epChunk)
         } else allEps
-        shownEps.forEach { ep ->
+        items(shownEps, contentType = { "ep" }) { ep ->
             EpisodeRow(ep, onClick = { ep.episodeId?.let(onOpenEpisode) })
         }
         if (d.episodeList.isNullOrEmpty()) {
-            Text("Belum ada episode.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            item {
+                Text("Belum ada episode.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
-        Spacer(Modifier.height(16.dp))
-        Text("Rekomendasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
+        item {
+            Spacer(Modifier.height(16.dp))
+            Text("Rekomendasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+        }
+        item {
         Column {
             val recs = remember { mutableStateOf<List<com.nusanime.app.data.model.AnimeItem>>(emptyList()) }
             androidx.compose.runtime.LaunchedEffect(animeId) {
@@ -314,6 +325,7 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                 }
             }
             Spacer(Modifier.height(24.dp))
+        }
         }
     }
 }
