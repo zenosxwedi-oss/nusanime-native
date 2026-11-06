@@ -277,8 +277,6 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
 
 private fun intRange(a: Int, b: Int): IntRange = if (a <= b) a..b else b..a
 
-private fun intRange(a: Int, b: Int): IntRange = if (a <= b) a..b else b..a
-
 @Composable
 private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
     fun epNum(e: EpisodeItem): Int {
@@ -291,7 +289,7 @@ private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
 
     var rangeIdx by remember(allEps) { androidx.compose.runtime.mutableIntStateOf(0) }
     val perRange = 30
-    val ranges = remember(allEps) {
+    val ranges: List<Triple<Int, Int, IntRange>> = remember(allEps) {
         (0 until total step perRange).map { start ->
             val end = minOf(start + perRange, total) - 1
             Triple(start, end, intRange(sorted[start].let { epNum(it) }, sorted[end].let { epNum(it) }))
