@@ -201,15 +201,24 @@ object AxSource {
     // ---------- Otakudesu via sankavollerei (FULL episode list) ----------
     private const val OD_BASE = "https://www.sankavollerei.web.id/anime"
 
-    private fun odGet(path: String): String? = try {
-        val conn = java.net.URL(OD_BASE + path).openConnection() as java.net.HttpURLConnection
-        conn.connectTimeout = 12000
-        conn.readTimeout = 20000
-        conn.setRequestProperty("User-Agent", "okhttp/4.12.0")
-        conn.setRequestProperty("Accept", "application/json")
-        if (conn.responseCode !in 200..299) null
-        else conn.inputStream.bufferedReader().use { it.readText() }
-    } catch (_: Exception) { null }
+    // Lewat PROXY VPS (javapi) — HP sering diblok CF kalau akses langsung ke sankavollerei
+    private fun odGet(path: String): String? {
+        return try {
+            val proxied = when {
+                path.startsWith("/anime/anime/") -> "/od/detail?slug=" + java.net.URLEncoder.encode(path.removePrefix("/anime/anime/"), "UTF-8")
+                path.startsWith("/anime/episode/") -> "/od/episode?id=" + java.net.URLEncoder.encode(path.removePrefix("/anime/episode/"), "UTF-8")
+                path.startsWith("/anime/server/") -> "/od/server?id=" + java.net.URLEncoder.encode(path.removePrefix("/anime/server/"), "UTF-8")
+                path.startsWith("/anime/search/") -> "/od/search?q=" + java.net.URLEncoder.encode(path.removePrefix("/anime/search/"), "UTF-8")
+                else -> null
+            } ?: return null
+            val conn = java.net.URL("https://vpn.nusanime.web.id/javapi" + proxied).openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 15000
+            conn.readTimeout = 30000
+            conn.setRequestProperty("Accept", "application/json")
+            if (conn.responseCode !in 200..299) null
+            else conn.inputStream.bufferedReader().use { it.readText() }
+        } catch (_: Exception) { null }
+    }
 
     /** Cari anime di Otakudesu lalu ambil detail + daftar episode LENGKAP. */
     suspend fun odDetail(animeId: String): DetailData? =
