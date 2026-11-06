@@ -158,15 +158,6 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
     }
     val allEps = d.episodeList.orEmpty()
     val pageCtx = androidx.compose.ui.platform.LocalContext.current
-    // DIAGNOSTIK: auto-scroll 1.5 dtk setelah buka + overlay status
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(1500)
-        try { if (allEps.isNotEmpty()) listState.animateScrollToItem(kotlin.math.min(12, allEps.size - 1)) } catch (_: Exception) {}
-    }
-    var dbgScrolling by remember { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(listState) {
-        androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }.collect { dbgScrolling = it }
-    }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -190,7 +181,16 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         // Poster + info dalam CARD (pola sama dengan halaman JADWAL yang terbukti bisa scroll)
-        LazyColumn(
+        // DIAGNOSTIK: auto-scroll 1.5 dtk setelah buka + overlay status
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(1500)
+        try { if (allEps.isNotEmpty()) listState.animateScrollToItem(kotlin.math.min(12, allEps.size - 1)) } catch (_: Exception) {}
+    }
+    var dbgScrolling by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(listState) {
+        androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }.collect { dbgScrolling = it }
+    }
+    LazyColumn(
             state = listState,
             contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
