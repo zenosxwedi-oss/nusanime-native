@@ -215,6 +215,7 @@ object AxSource {
             conn.connectTimeout = 15000
             conn.readTimeout = 30000
             conn.setRequestProperty("Accept", "application/json")
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
             if (conn.responseCode !in 200..299) null
             else conn.inputStream.bufferedReader().use { it.readText() }
         } catch (_: Exception) { null }
@@ -229,8 +230,9 @@ object AxSource {
         var body = odGet("/anime/anime/" + java.net.URLEncoder.encode(animeId, "UTF-8"))
         var det = parseOdDetail(body)
         if (det != null) return det
-        // fallback: search then take first result
-        val sbody = odGet("/anime/search/" + java.net.URLEncoder.encode(animeId, "UTF-8"))
+        // fallback: search with spaces (dash-slug rarely matches), try longest tokens first
+        var sbody = odGet("/anime/search/" + java.net.URLEncoder.encode(animeId.replace("-", " "), "UTF-8"))
+        if (sbody == null) sbody = odGet("/anime/search/" + java.net.URLEncoder.encode(animeId, "UTF-8"))
         if (sbody != null) {
             try {
                 val arr = com.google.gson.JsonParser.parseString(sbody).asJsonObject
