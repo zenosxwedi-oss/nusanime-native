@@ -281,20 +281,21 @@ private fun intRange(a: Int, b: Int): IntRange = if (a <= b) a..b else b..a
 private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
     fun epNum(e: EpisodeItem): Int {
         val t = (e.title?.toString() ?: "") + " " + (e.episodeId ?: "")
-        val m = Regex("(\\d+)").findAll(t).toList()
-        return m.lastOrNull()?.value?.toIntOrNull() ?: (allEps.indexOf(e) + 1)
+        // Cari pola "episode N" / "ep N" — BUKAN angka ID acak di slug
+        Regex("(?:episode|eps?|ep)[\\s_-]*?(\\d{1,4})(?!\\d)", RegexOption.IGNORE_CASE).find(t)?.groupValues?.get(1)?.toIntOrNull()?.let { return it }
+        // Coba angka STANDALONE 1-4 digit di title (hindari ID panjang)
+        Regex("(\\d{1,4})(?!\\d)").findAll(e.title?.toString() ?: "").lastOrNull()?.value?.toIntOrNull()?.let { if (it in 1..3000) return it }
+        return -1
     }
-    val sorted = remember(allEps) { allEps.sortedBy { epNum(it) } }
+    val sorted: List<Pair<EpisodeItem, Int>> = remember(allEps) {
+        val withNum = allEps.mapIndexed { i, e -> e to epNum(e) }
+        val known = withNum.filter { it.second > 0 }.sortedBy { it.second }
+        val unknown = withNum.filter { it.second <= 0 }
+        val knownStart = if (known.isNotEmpty()) known.first().second else 1
+        // episode tanpa nomor = taruh paling awal dgn nomor urut sebelum yang diketahui
+        unknown.mapIndexed { i, p -> p.first to (knownStart - unknown.size + i) } + known
+    }
     val total = sorted.size
-
-    var rangeIdx by remember(allEps) { androidx.compose.runtime.mutableIntStateOf(0) }
-    val perRange = 30
-    val ranges: List<Triple<Int, Int, IntRange>> = remember(allEps) {
-        (0 until total step perRange).map { start ->
-            val end = minOf(start + perRange, total) - 1
-            Triple(start, end, intRange(sorted[start].let { epNum(it) }, sorted[end].let { epNum(it) }))
-        }
-    }
     val cur = ranges[rangeIdx.coerceIn(0, ranges.lastIndex)]
     val rs = cur.first; val re = cur.second; val nums = cur.third
 
@@ -359,8 +360,9 @@ private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
                 ) {
-                    rowItems.forEach { ep ->
-                        val n = epNum(ep)
+                    rowItems.forEach { pair ->
+                        val n = pair.second
+                        val ep = pair.first
                         Surface(
                             onClick = { onPlay(ep.episodeId) },
                             modifier = Modifier.weight(1f).aspectRatio(1.9f),
