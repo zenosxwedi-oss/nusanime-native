@@ -273,11 +273,13 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
     }
 }
 
+private fun intRange(a: Int, b: Int): IntRange = if (a <= b) a..b else b..a
+
 @Composable
 private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
     // Urutkan ASC berdasar nomor episode (ambil angka dari title / episodeId)
     fun epNum(e: EpisodeItem): Int {
-        val t = (e.title ?: "") + " " + (e.episodeId ?: "")
+        val t = (e.title?.toString() ?: "") + " " + (e.episodeId ?: "")
         val m = Regex("(\\d+)").findAll(t).toList()
         return m.lastOrNull()?.value?.toIntOrNull() ?: (allEps.indexOf(e) + 1)
     }
@@ -289,10 +291,11 @@ private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
     val ranges = remember(allEps) {
         (0 until total step perRange).map { start ->
             val end = minOf(start + perRange, total) - 1
-            Triple(start, end, sorted[start].let { epNum(it) }..sorted[end].let { epNum(it) })
+            Triple(start, end, intRange(sorted[start].let { epNum(it) }, sorted[end].let { epNum(it) }))
         }
     }
-    val (rs, re, nums) = ranges[rangeIdx.coerceIn(0, ranges.lastIndex)]
+    val cur = ranges[rangeIdx.coerceIn(0, ranges.lastIndex)]
+    val rs = cur.first; val re = cur.second; val nums = cur.third
 
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
@@ -307,7 +310,7 @@ private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             itemsIndexed(ranges) { i, r ->
-                val label = "${r.third.first}-${r.third.second}"
+                val label = "${r.third.first}-${r.third.last}"
                 FilterChip(
                     selected = i == rangeIdx,
                     onClick = { rangeIdx = i },
