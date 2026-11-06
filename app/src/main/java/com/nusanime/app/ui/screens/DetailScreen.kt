@@ -296,6 +296,15 @@ private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
         unknown.mapIndexed { i, p -> p.first to (knownStart - unknown.size + i) } + known
     }
     val total = sorted.size
+
+    var rangeIdx by remember(allEps) { androidx.compose.runtime.mutableIntStateOf(0) }
+    val perRange = 30
+    val ranges: List<Triple<Int, Int, IntRange>> = remember(allEps) {
+        (0 until total step perRange).map { start ->
+            val end = minOf(start + perRange, total) - 1
+            Triple(start, end, intRange(sorted[start].second, sorted[end].second))
+        }
+    }
     val cur = ranges[rangeIdx.coerceIn(0, ranges.lastIndex)]
     val rs = cur.first; val re = cur.second; val nums = cur.third
 
