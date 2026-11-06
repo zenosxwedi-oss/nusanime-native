@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Bookmarks
@@ -275,9 +277,10 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
 
 private fun intRange(a: Int, b: Int): IntRange = if (a <= b) a..b else b..a
 
+private fun intRange(a: Int, b: Int): IntRange = if (a <= b) a..b else b..a
+
 @Composable
 private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
-    // Urutkan ASC berdasar nomor episode (ambil angka dari title / episodeId)
     fun epNum(e: EpisodeItem): Int {
         val t = (e.title?.toString() ?: "") + " " + (e.episodeId ?: "")
         val m = Regex("(\\d+)").findAll(t).toList()
@@ -297,50 +300,82 @@ private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
     val cur = ranges[rangeIdx.coerceIn(0, ranges.lastIndex)]
     val rs = cur.first; val re = cur.second; val nums = cur.third
 
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-            Text("Episode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                Text("$total", Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    // KARTU BESAR "Episode" (gaya web)
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Episode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Text("$total", Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-        }
 
-        // Chip rentang (persis gaya nusanime web): "1-30", "31-60", ...
-        androidx.compose.foundation.lazy.LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            itemsIndexed(ranges) { i, r ->
-                val label = "${r.third.first}-${r.third.last}"
-                FilterChip(
-                    selected = i == rangeIdx,
-                    onClick = { rangeIdx = i },
-                    label = { Text(label, fontWeight = if (i == rangeIdx) FontWeight.Bold else FontWeight.Medium) },
-                )
-            }
-        }
+            Spacer(Modifier.height(12.dp))
 
-        Spacer(Modifier.height(10.dp))
-
-        // Grid tombol nomor episode, 4 kolom, ascending
-        sorted.subList(rs, re + 1).chunked(4).forEach { rowItems ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            ) {
-                rowItems.forEach { ep ->
-                    val n = epNum(ep)
-                    Surface(
-                        onClick = { onPlay(ep.episodeId) },
-                        modifier = Modifier.weight(1f).aspectRatio(1.9f),
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text("$n", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+            // Chip rentang + panah kiri/kanan
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledIconButton(
+                    onClick = { if (rangeIdx > 0) rangeIdx-- },
+                    enabled = rangeIdx > 0,
+                    modifier = Modifier.size(34.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, Modifier.size(18.dp)) }
+                androidx.compose.foundation.lazy.LazyRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    itemsIndexed(ranges) { i, r ->
+                        val label = "${r.third.first}-${r.third.last}"
+                        Surface(
+                            onClick = { rangeIdx = i },
+                            shape = RoundedCornerShape(50),
+                            color = if (i == rangeIdx) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ) {
+                            Text(
+                                label,
+                                Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (i == rangeIdx) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            )
                         }
                     }
                 }
-                repeat(4 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                FilledIconButton(
+                    onClick = { if (rangeIdx < ranges.lastIndex) rangeIdx++ },
+                    enabled = rangeIdx < ranges.lastIndex,
+                    modifier = Modifier.size(34.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(18.dp)) }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            // Grid nomor: kotak rounded, tap = play
+            sorted.subList(rs, re + 1).chunked(4).forEach { rowItems ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                ) {
+                    rowItems.forEach { ep ->
+                        val n = epNum(ep)
+                        Surface(
+                            onClick = { onPlay(ep.episodeId) },
+                            modifier = Modifier.weight(1f).aspectRatio(1.9f),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text("$n", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
+                    }
+                    repeat(4 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                }
             }
         }
     }

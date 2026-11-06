@@ -13,16 +13,16 @@ import androidx.compose.ui.unit.sp
 
 // ===== DARK CYBER ELEGANT =====
 // Latar hitam pekat, aksen cyan neon, tipografi tegas. Ringan: tanpa gradien berat.
-val CyberBg = Color(0xFF06080D)          // hitam pekat
-val CyberSurface = Color(0xFF0C1017)     // surface
-val CyberCard = Color(0xFF111722)        // kartu
-val CyberCardHigh = Color(0xFF18202E)    // kartu terangkat
-val CyberAccent = Color(0xFF00E5FF)      // cyan neon
-val CyberAccentDim = Color(0xFF0891B2)
-val CyberText = Color(0xFFE6F1FF)
+val CyberBg = Color(0xFF12141D)          // hitam pekat
+val CyberSurface = Color(0xFF171923)     // surface
+val CyberCard = Color(0xFF1D2029)        // kartu
+val CyberCardHigh = Color(0xFF2A2F3F)    // kartu terangkat
+val CyberAccent = Color(0xFF8B5CF6)      // cyan neon
+val CyberAccentDim = Color(0xFF7C5CE0)
+val CyberText = Color(0xFFF2F3F7)
 val CyberTextDim = Color(0xFF8A97AB)
-val CyberOutline = Color(0xFF1E2A3A)
-val CyberOnAccent = Color(0xFF00131A)
+val CyberOutline = Color(0xFF2C3140)
+val CyberOnAccent = Color(0xFFFFFFFF)
 
 val AccentRed = CyberAccent   // kompat alias
 val BgDark = CyberBg
