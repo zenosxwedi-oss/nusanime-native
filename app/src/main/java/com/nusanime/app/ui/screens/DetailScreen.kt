@@ -227,22 +227,7 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
                 }
             }
             item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Daftar Episode (${allEps.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    OutlinedButton(onClick = {
-                        scope.launch { listState.animateScrollToItem(0) }
-                    }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
-                        Text("⬆", style = MaterialTheme.typography.labelLarge)
-                    }
-                    OutlinedButton(onClick = {
-                        scope.launch { if (allEps.isNotEmpty()) listState.animateScrollToItem(allEps.size - 1) }
-                    }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
-                        Text("Ep 1 ⬇", style = MaterialTheme.typography.labelLarge)
-                    }
-                }
-            }
-            itemsIndexed(allEps, contentType = { _, _ -> "ep" }) { idx, ep ->
-                EpisodeRow(ep, index = idx, onClick = { ep.episodeId?.let(onOpenEpisode) })
+                EpisodeGrid(allEps = allEps, onPlay = { epId -> epId?.let(onOpenEpisode) })
             }
             if (allEps.isEmpty()) {
                 item { Text("Belum ada episode.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -289,32 +274,71 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
 }
 
 @Composable
-private fun EpisodeRow(ep: EpisodeItem, index: Int, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
-    ) {
-        Row(
-            Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+private fun EpisodeGrid(allEps: List<EpisodeItem>, onPlay: (String?) -> Unit) {
+    // Urutkan ASC berdasar nomor episode (ambil angka dari title / episodeId)
+    fun epNum(e: EpisodeItem): Int {
+        val t = (e.title ?: "") + " " + (e.episodeId ?: "")
+        val m = Regex("(\\d+)").findAll(t).toList()
+        return m.lastOrNull()?.value?.toIntOrNull() ?: (allEps.indexOf(e) + 1)
+    }
+    val sorted = remember(allEps) { allEps.sortedBy { epNum(it) } }
+    val total = sorted.size
+
+    var rangeIdx by remember(allEps) { androidx.compose.runtime.mutableIntStateOf(0) }
+    val perRange = 30
+    val ranges = remember(allEps) {
+        (0 until total step perRange).map { start ->
+            val end = minOf(start + perRange, total) - 1
+            Triple(start, end, sorted[start].let { epNum(it) }..sorted[end].let { epNum(it) })
+        }
+    }
+    val (rs, re, nums) = ranges[rangeIdx.coerceIn(0, ranges.lastIndex)]
+
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+            Text("Episode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                Text("$total", Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
+        // Chip rentang (persis gaya nusanime web): "1-30", "31-60", ...
+        androidx.compose.foundation.lazy.LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.size(34.dp),
+            itemsIndexed(ranges) { i, r ->
+                val label = "${r.third.first}-${r.third.second}"
+                FilterChip(
+                    selected = i == rangeIdx,
+                    onClick = { rangeIdx = i },
+                    label = { Text(label, fontWeight = if (i == rangeIdx) FontWeight.Bold else FontWeight.Medium) },
+                )
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        // Grid tombol nomor episode, 4 kolom, ascending
+        sorted.subList(rs, re + 1).chunked(4).forEach { rowItems ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text("${index + 1}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                rowItems.forEach { ep ->
+                    val n = epNum(ep)
+                    Surface(
+                        onClick = { onPlay(ep.episodeId) },
+                        modifier = Modifier.weight(1f).aspectRatio(1.9f),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text("$n", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
                 }
+                repeat(4 - rowItems.size) { Spacer(Modifier.weight(1f)) }
             }
-            Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(ep.titleText(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                (ep.date ?: ep.releasedOn)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            }
-            Icon(Icons.Filled.PlayArrow, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         }
     }
 }
