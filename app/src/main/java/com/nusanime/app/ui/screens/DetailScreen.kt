@@ -160,15 +160,6 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
     val pageCtx = androidx.compose.ui.platform.LocalContext.current
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    var dbgScrolling by remember { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(listState) {
-        androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }.collect { dbgScrolling = it }
-    }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(1500)
-        try { if (allEps.isNotEmpty()) listState.animateScrollToItem(kotlin.math.min(12, allEps.size - 1)) } catch (_: Exception) {}
-    }
-
     Column {
         // Header kembali (dipisah dari area scroll, seperti halaman JADWAL yang pasti bisa di-scroll)
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -182,12 +173,6 @@ fun DetailScreen(animeId: String, onBack: () -> Unit, onOpenEpisode: (String) ->
             }
         }
 
-        Text(
-            "DEBUG idx=${listState.firstVisibleItemIndex} scroll=$dbgScrolling eps=${allEps.size}",
-            style = MaterialTheme.typography.labelSmall,
-            color = androidx.compose.ui.graphics.Color.Yellow,
-            modifier = Modifier.padding(horizontal = 12.dp),
-        )
         // Poster + info dalam CARD (pola sama dengan halaman JADWAL yang terbukti bisa scroll)
         LazyColumn(
             state = listState,
