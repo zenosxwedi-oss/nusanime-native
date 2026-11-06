@@ -129,10 +129,16 @@ class DetailViewModel(private val animeId: String) : ViewModel() {
     fun load() {
         viewModelScope.launch {
             error = try {
-                val env = com.nusanime.app.data.api.AxSource.detail(animeId)
-                val d = env.data
-                if (env.status != "success" || d?.title == null) "Gagal memuat detail (${env.message ?: env.status ?: "data kosong"})"
-                else { detail = d; null }
+                // PRIORITAS: Otakudesu (episode LENGKAP sampai Ep 1), fallback animein
+                val od = com.nusanime.app.data.api.AxSource.odDetail(animeId)
+                if (od?.title != null && !od.episodeList.isNullOrEmpty()) {
+                    detail = od; null
+                } else {
+                    val env = com.nusanime.app.data.api.AxSource.detail(animeId)
+                    val d = env.data
+                    if (env.status != "success" || d?.title == null) "Gagal memuat detail (${env.message ?: env.status ?: "data kosong"})"
+                    else { detail = d; null }
+                }
             } catch (e: Exception) {
                 "Gagal memuat detail: ${e.message ?: "kesalahan jaringan"}"
             }

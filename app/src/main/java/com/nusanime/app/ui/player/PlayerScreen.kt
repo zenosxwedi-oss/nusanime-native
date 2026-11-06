@@ -72,6 +72,30 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
     fun load() {
         viewModelScope.launch {
             error = try {
+                // PRIORITAS: Otakudesu (episodeId slug "xxx-sub-indo") → server → embed URL
+                val od = com.nusanime.app.data.api.AxSource.odEpisode(episodeId)
+                val odData = od
+                val odServers = odData?.server?.qualities.orEmpty().flatMap { it.serverList.orEmpty() }
+                if (odData != null && odServers.isNotEmpty()) {
+                    data = odData
+                    playError = null
+                    try {
+                        val ctx = com.nusanime.app.MainApplication.instance
+                        val h = com.nusanime.app.data.db.AppDatabase.get(ctx).historyDao().get(episodeId)
+                        if (h != null && h.durationMs > 0 && h.positionMs < h.durationMs - 15000) {
+                            resumePositionMs = h.positionMs
+                        }
+                    } catch (_: Exception) {}
+                    // resolve server pertama yang menghasilkan URL
+                    var played = false
+                    for (srv in odServers) {
+                        val sid = srv.serverId ?: continue
+                        val url = com.nusanime.app.data.api.AxSource.odServer(sid)
+                        if (!url.isNullOrBlank()) { tryPlay(url); played = true; break }
+                    }
+                    if (!played) playError = "Server streaming tidak tersedia. Tap Coba Lagi."
+                    null
+                } else {
                 val env = com.nusanime.app.data.api.AxSource.episode(episodeId)
                 val d = env.data
                 if (env.status != "success" || d == null) "Gagal memuat episode (${env.message ?: env.status ?: "data kosong"})"
@@ -92,6 +116,7 @@ class PlayerViewModel(private val episodeId: String) : ViewModel() {
                         d.defaultStreamingUrl?.let { tryPlay(it) }
                     }
                     null
+                }
                 }
             } catch (e: Exception) {
                 "Gagal memuat episode: ${e.message ?: "kesalahan jaringan"}"
